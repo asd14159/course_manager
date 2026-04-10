@@ -108,4 +108,20 @@ class Controller_Api_Assignment extends Controller_RestBase
 
         return $this->response(array('status' => 'success'), 200);
     }
+
+    public function post_delete()
+    {
+        $id = \Input::post('id');
+
+        if ($id && is_numeric($id)) {
+            // DBから削除を実行
+            \DB::delete('assignments')
+                ->where('id', '=', $id)
+                ->execute();
+
+            return $this->response(array('status' => 'success'), 200);
+        }
+
+        return $this->response(array('status' => 'error', 'message' => '不正なIDです'), 400);
+    }
 }

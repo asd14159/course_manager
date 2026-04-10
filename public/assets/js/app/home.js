@@ -222,6 +222,44 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         };
 
+        // home.js の中で、他の self.xxx = function... の並びに追加
+        self.deleteAssignment = function(assignment) {
+            // 1. 誤操作防止の確認
+            if (!confirm("「" + assignment.title + "」を削除してもよろしいですか？")) {
+                return;
+            }
+
+            // 2. 送信データの準備
+            const params = new URLSearchParams();
+            params.append('id', assignment.id); // assignment.id はDBの主キー
+
+            // 3. サーバーへリクエストを飛ばす
+            fetch('/api/assignment/delete.json', { // URLは環境に合わせて調整してください
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('削除に失敗しました');
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    alert("削除が完了しました");
+                    // 画面をリロードして最新状態にする
+                    window.location.reload();
+                } else {
+                    alert("エラー: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("通信エラーが発生しました");
+            });
+        };
+
         // --- 初期化 ---
         self.loadAssignments(null);
     }

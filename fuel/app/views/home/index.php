@@ -28,8 +28,8 @@
                         </a>
                     </li>
                 <?php endforeach; ?>
-    </ul>
-</nav>
+            </ul>
+        </nav>
     </aside>
 
     <main class="main-content">
@@ -67,6 +67,17 @@
                         <td data-bind="visible: !$parent.selectedCourse(), text: course_name || '不明'"></td>
                         <td class="col-deadline" data-bind="text: deadline_formatted"></td>
                         <td class="col-priority" data-bind="text: 'Lv.' + priority"></td>
+                        <td class="col-action">
+                            <div class="action-wrapper">
+                                <button class="icon-btn edit-btn" title="編集" data-bind="click: $parent.editAssignment">
+                                    <span>✏️</span>
+                                </button>
+                                
+                                <button class="icon-btn delete-btn" title="削除" data-bind="click: $parent.deleteAssignment">
+                                    <span>🗑️</span>
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
