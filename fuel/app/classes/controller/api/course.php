@@ -60,4 +60,55 @@ class Controller_Api_Course extends Controller_Rest
             ), 500);
         }
     }
+
+    /**
+ * 授業名の更新処理
+ * URL: /api/course/update.json
+ */
+    public function post_update()
+    {
+        // 1. 入力値の取得
+        $id = \Input::post('id');
+        $name = \Input::post('name');
+        $day_of_week = \Input::post('day_of_week');
+        $period = \Input::post('period');
+
+        // 2. バリデーション（必須項目と数値型のチェック）
+        // ID、名前、曜日は0が入りうるため isset() や strlen() で厳密にチェック
+        if (!$id || !isset($name) || !isset($day_of_week) || !isset($period)) {
+            return $this->response(array(
+                'status' => 'error', 
+                'message' => '必要な情報が不足しています'
+            ), 400);
+        }
+
+        try {
+            // 3. データベース更新実行
+            $result = \DB::update('courses')
+                ->set(array(
+                    'name'         => $name,
+                    'day_of_week'  => (int) $day_of_week, // TinyIntにキャスト
+                    'period'       => (int) $period,      // TinyIntにキャスト
+                    'updated_at'   => date('Y-m-d H:i:s'), // ここを修正
+                ))
+                ->where('id', '=', $id)
+                // セキュリティのため、本来はここに ->where('user_id', '=', $current_user_id) を入れるのがベスト
+                ->execute();
+
+            // execute() の戻り値は「影響を受けた行数」
+            // 値が全く同じで更新されなかった場合も成功とするため、エラーにはしません
+            return $this->response(array(
+                'status' => 'success',
+                'message' => '授業情報を更新しました'
+            ), 200);
+
+        } catch (\Exception $e) {
+            return $this->response(array(
+                'status' => 'error', 
+                'message' => $e->getMessage(), // ← 本物のエラーメッセージが出るようになる
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ), 500);
+        }
+    }
 }

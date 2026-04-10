@@ -12,19 +12,32 @@ class Controller_Api_Assignment extends Controller_RestBase
 
     public function get_list($course_id = null)
     {
-        // 1. 授業IDがない場合は、エラーではなく空の配列を返す（JSの .length エラー防止）
-        if (!$course_id) {
-            return $this->response(array());
+        try {
+            // 1. パラメータのバリデーション
+            // 授業IDが指定されていない、あるいは数値でない場合は 400 Bad Request
+            if ($course_id === null || !is_numeric($course_id)) {
+                return $this->response(array(
+                    'status'  => 'error',
+                    'message' => '授業IDが正しく指定されていません'
+                ), 400);
+            }
+
+            // 2. データの取得
+            $assignments = \Model_Assignment::get_by_course($course_id);
+
+            // 3. レスポンス（データが0件でも空の配列 [] を 200 OK で返す）
+            // 常に一貫したデータ型（この場合は配列）を返すのがポイントです
+            return $this->response($assignments, 200);
+
+        } catch (\Exception $e) {
+            // 4. 万が一のサーバーエラー対応
+            \Log::error("Assignment list fetch error: " . $e->getMessage());
+            return $this->response(array(
+                'status'  => 'error',
+                'message' => '課題データの取得中にエラーが発生しました'
+            ), 500);
         }
-
-        // 2. Modelに新しく作った get_by_course メソッドを呼び出す
-        // これにより、deadline_formatted が付与された「配列」が取得できる
-        $assignments = \Model_Assignment::get_by_course($course_id);
-        
-        // 3. 結果を返す（データが0件でも get_by_course が空配列を返せば JS は落ちない）
-        return $this->response($assignments);
     }
-
     /**
      * 課題の新規登録 (POST)
      * 要件9: CRUDのCreate / 要件7: DBクラスの使用

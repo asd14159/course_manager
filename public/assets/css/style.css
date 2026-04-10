@@ -243,3 +243,29 @@
     transform: scale(1.2);
     color: #ff4d4d; /* ホバー時に赤くしても良い */
 }
+
+.course-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    width: 100%;
+}
+
+.select-group {
+    display: flex;
+    gap: 5px;
+}
+
+.select-group select {
+    flex: 1;
+    padding: 4px;
+}
+
+.edit-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.save-btn { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; flex: 1; }
+.cancel-btn { background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }

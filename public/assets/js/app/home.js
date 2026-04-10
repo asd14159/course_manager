@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
         self.currentSort = ko.observable('deadline'); 
         self.isUpdating = ko.observable(false); 
         self.isModalVisible = ko.observable(false);
+        // 1. 変数の定義（self = this; のすぐ下あたり）
+        self.editingCourseId = ko.observable(null);
 
         // 追加フォーム専用のObservable（ここだけにまとめます）
         self.selectedCourseForAdd = ko.observable(""); // ここで1回だけ定義
@@ -24,6 +26,46 @@ document.addEventListener('DOMContentLoaded', function() {
             const course = self.selectedCourse();
             return course ? course.name + ' の課題' : 'すべての課題';
         });
+
+        // 2. 編集開始
+        self.startEdit = function(id, event) {
+            if (event && event.stopPropagation) event.stopPropagation();
+                self.editingCourseId(id);
+        };
+
+        // 3. 編集保存
+        self.saveEdit = function(id, event) {
+            if (event && event.stopPropagation) event.stopPropagation();
+
+            // DOMから値を取得
+            const name = document.getElementById(`edit-name-${id}`).value;
+            const day = document.getElementById(`edit-day-${id}`).value;
+            const period = document.getElementById(`edit-period-${id}`).value;
+
+            if (!name) { alert("授業名を入力してください"); return; }
+
+            const params = new URLSearchParams();
+            params.append('id', id);
+            params.append('name', name);
+            params.append('day_of_week', day);
+            params.append('period', period);
+
+            fetch('/api/course/update.json', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    self.editingCourseId(null); // 編集モード終了
+                    window.location.reload();   // 再読み込みして反映
+                } else {
+                    alert("エラー: " + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        };
 
         // 【修正ポイント】ここで定義！
         self.isNewCourseMode = ko.computed(() => {
