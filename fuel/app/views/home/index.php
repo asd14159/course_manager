@@ -16,16 +16,26 @@
                 </li>
 
                 <?php foreach ($courses as $course): ?>
-                    <li data-bind="css: { active: selectedCourse() && selectedCourse().id == <?php echo $course->id; ?> }">
-                        <a href="#" data-bind="click: function() { selectCourse(<?php echo $course->id; ?>, '<?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>') }">
-                            <div class="course-name">
-                                <?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>
-                            </div>
-                            <div class="course-meta">
-                                <span class="course-day"><?php echo $day_names[$course->day_of_week] ?? '？'; ?>曜日</span>
-                                <span class="course-period"><?php echo $course->period; ?>限</span>
-                            </div>
-                        </a>
+                    <li class="course-item" data-bind="css: { active: selectedCourse() && selectedCourse().id == <?php echo $course->id; ?> }">
+                        
+                        <div class="course-item-inner">
+                            <a href="#" class="course-info" data-bind="click: function() { selectCourse(<?php echo $course->id; ?>, '<?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>') }">
+                                <div class="course-name">
+                                    <?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                                <div class="course-meta">
+                                    <span class="course-day"><?php echo $day_names[$course->day_of_week] ?? '？'; ?>曜日</span>
+                                    <span class="course-period"><?php echo $course->period; ?>限</span>
+                                </div>
+                            </a>
+
+                            <button class="course-delete-btn" 
+                                    title="授業を削除"
+                                    data-bind="click: function(data, event) { $root.deleteCourse(<?php echo $course->id; ?>, '<?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>', event) }">
+                                🗑️
+                            </button>
+                        </div>
+
                     </li>
                 <?php endforeach; ?>
             </ul>

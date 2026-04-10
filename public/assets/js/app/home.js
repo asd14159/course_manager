@@ -108,6 +108,48 @@ document.addEventListener('DOMContentLoaded', function() {
             
         };
 
+        self.deleteCourse = function(id, name, event) {
+            if (event && event.stopPropagation) event.stopPropagation();
+
+            if (!confirm(`授業「${name}」を削除しますか？`)) return;
+
+            console.log("削除リクエスト送信開始: ID =", id); // デバッグ用
+
+            const params = new URLSearchParams();
+            params.append('id', id);
+
+            fetch('/api/course/delete.json', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            })
+            .then(async response => {
+                // デバッグポイント：レスポンスの状態を確認
+                console.log("ステータスコード:", response.status);
+                
+                if (!response.ok) {
+                    // サーバーがエラー（500など）を返した場合、その中身（PHPのエラー文）を読み出す
+                    const errorText = await response.text();
+                    throw new Error(`サーバーエラー(${response.status}): ${errorText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("受信データ:", data);
+                if (data.status === 'success') {
+                    alert("削除完了！");
+                    window.location.reload();
+                } else {
+                    alert("サーバーからの拒否: " + data.message);
+                }
+            })
+            .catch(error => {
+                // デバッグポイント：エラーの詳細をアラートで出す
+                console.error("詳細エラー:", error);
+                alert("デバッグ情報:\n" + error.message);
+            });
+        };
+
         // 【追加】
         self.addAssignment = function() {
             if (self.isUpdating()) return;
@@ -263,6 +305,40 @@ document.addEventListener('DOMContentLoaded', function() {
         // --- 初期化 ---
         self.loadAssignments(null);
     }
+
+    self.deleteCourse = function(id, name) {
+        if (!confirm(`授業「${name}」を削除しますか？\n※この授業内の課題もすべて削除されます。`)) {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.append('id', id);
+
+        // 送信先を新しく作った course.php の方に変える！
+        fetch('/api/course/delete.json', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        })
+        // ...あとの処理は課題削除の時と同じ
+        .then(response => {
+            if (!response.ok) throw new Error('削除に失敗しました');
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                alert("削除が完了しました");
+                // 画面をリロードして最新状態にする
+                window.location.reload();
+            } else {
+                alert("エラー: " + data.message);
+            }
+        })
+        .catch(error => {       
+            console.error('Error:', error);
+            alert("通信エラーが発生しました");
+        });
+    };
 
     ko.applyBindings(new HomeViewModel());
 });

@@ -204,3 +204,42 @@
 .delete-btn:hover {
     background-color: #cc0000;
 }
+
+/* 親の li の中で横並びにする準備 */
+.course-item-inner {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+/* 授業情報のリンクを広げる */
+.course-info {
+    flex-grow: 1; /* 左側を埋め尽くす */
+    text-decoration: none;
+    color: inherit;
+    padding: 10px;
+    display: block;
+}
+
+/* 削除ボタンのスタイル */
+.course-delete-btn {
+    opacity: 0; /* 普段は隠す */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    padding: 10px;
+    transition: all 0.2s;
+}
+
+/* 授業（li）にマウスが乗ったら、ゴミ箱をうっすら表示 */
+.course-item:hover .course-delete-btn {
+    opacity: 0.5;
+}
+
+/* ゴミ箱の上にマウスが乗ったら、はっきり表示 */
+.course-delete-btn:hover {
+    opacity: 1 !important;
+    transform: scale(1.2);
+    color: #ff4d4d; /* ホバー時に赤くしても良い */
+}
