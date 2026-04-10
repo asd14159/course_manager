@@ -36,9 +36,15 @@ RUN usermod -u 1000 www-data && groupmod -g 1000 www-data
 RUN a2enmod rewrite headers
 
 # DocumentRootを変更し、環境変数を設定
+# RUN DEFAULT_SITE_FILE=/etc/apache2/sites-enabled/000-default.conf && \
+#     TMP=$(mktemp) && \
+#     sed 's!/var/www/html!/var/www/html/public!' $DEFAULT_SITE_FILE \
+#     echo SetEnv FUEL_ENV development >> $TMP && \
+#     mv $TMP $DEFAULT_SITE_FILE
+
 RUN DEFAULT_SITE_FILE=/etc/apache2/sites-enabled/000-default.conf && \
     TMP=$(mktemp) && \
-    sed 's!/var/www/html!/var/www/html/my_fuel_project/public!' $DEFAULT_SITE_FILE > $TMP && \
+    sed 's!/var/www/html!/var/www/html/public!' $DEFAULT_SITE_FILE > $TMP && \
     echo SetEnv FUEL_ENV development >> $TMP && \
     mv $TMP $DEFAULT_SITE_FILE
 
@@ -51,9 +57,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
 # Oilをインストール
-RUN mkdir /var/www/html/my_fuel_project && \
-    cd /var/www/html/my_fuel_project && \
-    curl https://get.fuelphp.com/oil | sh
+# RUN mkdir /var/www/html/my_fuel_project && \
+#     cd /var/www/html/my_fuel_project && \
+#     curl https://get.fuelphp.com/oil | sh
+
+RUN curl -s https://get.fuelphp.com/oil | sh
 
 EXPOSE 80
 

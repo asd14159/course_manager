@@ -8,8 +8,10 @@ services:
     container_name: fuelphp-app
     ports:
       - "80:80"
+    environment:
+      - FUEL_ENV=development
     volumes:
-      - ../:/var/www/html/my_fuel_project
+      - ../:/var/www/html
     networks:
       - fuelphp-network
 
@@ -22,6 +24,19 @@ services:
       MYSQL_DATABASE: course_manager
     ports:
       - "3307:3306"
+    networks:
+      - fuelphp-network
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1 # 任意のサーバに接続可能にする
+      - PMA_HOST=db      # dbサービスに接続する
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    ports:
+      - "8080:80"        # ブラウザでは 8080番ポートを使う
     networks:
       - fuelphp-network
 

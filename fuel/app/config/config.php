@@ -259,10 +259,17 @@ return array(
 	/**************************************************************************/
 	/* Always Load                                                            */
 	/**************************************************************************/
-	// 'always_load'  => array(
+	'always_load'  => array(
 
+		'packages'  => array(
+            'auth',
+        ),
 		/**
 		 * These packages are loaded on Fuel's startup.
+		'modules'  => array(),
+		'classes'  => array(),
+		'config'  => array(),
+		'language'  => array(),
 		 * You can specify them in the following manner:
 		 *
 		 * array('auth'); // This will assume the packages are in PKGPATH
@@ -274,7 +281,7 @@ return array(
 		 */
 		// 'packages'  => array(
 		// 	//'orm',
-		// ),
+		),
 
 		/**
 		 * These modules are always loaded on Fuel's startup. You can specify them
