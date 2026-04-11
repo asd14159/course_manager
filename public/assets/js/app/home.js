@@ -120,13 +120,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 【取得】
         self.loadAssignments = function(courseId, courseName) {
+            self.assignments([]);
             self.selectedCourse(courseId ? { id: courseId, name: courseName } : null);
             const url = courseId ? `/api/assignment/list/${courseId}.json` : '/api/assignment/all.json';
             
             fetch(url)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error("HTTP error");
+                    return response.text();
+                })
+
+                .then(text => {
+                    // もし中身が「空っぽ」なら、JSON.parseせずに空の構造を返す
+                    if (!text || text.trim() === "") {
+                        console.warn("サーバーからの返却値が空でした");
+                        return { status: "success", assignments: [] }; 
+                    }
+                    
+                    // 中身がある時だけ JSON に変換する
+                    return JSON.parse(text);
+                })
+
                 .then(data => {
-                    const formattedData = (Array.isArray(data) ? data : []).map(item => {
+                    const targetData = (data && data.assignments) ? data.assignments : [];
+
+                    const formattedData = targetData.map(item => {
                         
                         // ① まず先に Observable（センサー）を作る！
                         const isCompleted = Number(item.is_completed) === 1;
@@ -139,7 +157,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             self.sortAssignments();     // 即座に並び替え
                             self.toggleComplete(item, status); // 裏で通信
                         });
-
                         return item;
                     });
 
@@ -149,6 +166,80 @@ document.addEventListener('DOMContentLoaded', function() {
                 .catch(error => console.error("Load Error:", error));
             
         };
+
+//         self.loadAssignments = function(courseId, courseName) {
+//     console.log("--- デバッグ開始 ---");
+//     console.log("選択された授業:", { id: courseId, name: courseName });
+
+//     self.assignments([]);
+//     self.selectedCourse(courseId ? { id: courseId, name: courseName } : null);
+    
+//     const url = courseId ? `/api/assignment/list/${courseId}.json` : '/api/assignment/all.json';
+//     console.log("リクエスト先URL:", url);
+
+//     fetch(url)
+//         .then(response => {
+//             // ステップ1: レスポンスの状態を確認
+//             console.log("【1. 通信状態】", {
+//                 status: response.status,
+//                 statusText: response.statusText,
+//                 ok: response.ok,
+//                 headers: [...response.headers.entries()] // 全ヘッダーを表示
+//             });
+
+//             if (!response.ok) {
+//                 throw new Error(`HTTPエラー発生: ${response.status}`);
+//             }
+//             // 重要：ここで一度「テキスト」として受け取る
+//             return response.text(); 
+//         })
+//         .then(text => {
+//             // ステップ2: 届いた生データの中身を確認
+//             console.log("【2. 受信データ(生)】", text === "" ? "(空っぽです！)" : text);
+
+//             if (!text || text.trim() === "") {
+//                 console.warn("警告: サーバーから中身が返ってきていません。");
+//                 return []; 
+//             }
+
+//             // ステップ3: JSONパースを試みる
+//             try {
+//                 const data = JSON.parse(text);
+//                 console.log("【3. JSON変換後】", data);
+//                 return data;
+//             } catch (e) {
+//                 console.error("【3. JSON変換エラー】パースに失敗しました。データが壊れている可能性があります。");
+//                 throw e;
+//             }
+//         })
+//         .then(data => {
+//             // ステップ4: Knockout.js用のデータ整形
+//             const targetData = Array.isArray(data) ? data : (data.assignments || []);
+//             console.log(`【4. 最終処理】 ${targetData.length} 件の課題を処理します。`);
+
+//             const formattedData = targetData.map(item => {
+//                 const isCompleted = Number(item.is_completed) === 1;
+//                 item.is_completed_bool = ko.observable(isCompleted);
+//                 item.is_completed_bool.subscribe((newValue) => {
+//                     const status = newValue ? 1 : 0;
+//                     item.is_completed = status;
+//                     self.sortAssignments();
+//                     self.toggleComplete(item, status);
+//                 });
+//                 return item;
+//             });
+
+//             self.assignments(formattedData);
+//             self.sortAssignments(); 
+//         })
+//         .catch(error => {
+//             // すべてのエラーをここで詳細に表示
+//             console.error("--- 致命的エラー発生 ---");
+//             console.error("エラーの種類:", error.name);
+//             console.error("メッセージ:", error.message);
+//             console.error("スタックトレース:", error.stack);
+//         });
+// };
 
         self.deleteCourse = function(id, name, event) {
             if (event && event.stopPropagation) event.stopPropagation();

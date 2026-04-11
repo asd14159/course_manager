@@ -17,18 +17,20 @@ class Model_Assignment extends \Model_Crud
     public static function get_by_course($course_id)
     {
         // DB::selectを使って、JSが欲しがっている全ての項目を揃える
-            return \DB::select(
+            $result =  \DB::select(
                 'assignments.*',
                 array('courses.name', 'course_name'), // これが必要！
                 \DB::expr("DATE_FORMAT(deadline, '%Y-%m-%d') AS deadline_formatted") // これも必要！
             )
             ->from(static::$_table_name)
-            ->join('courses', 'INNER')
+            ->join('courses', 'LEFT')
             ->on('assignments.course_id', '=', 'courses.id')
             ->where('assignments.course_id', '=', $course_id)
             ->order_by('deadline', 'asc')
             ->execute()
             ->as_array();
+
+            return $result ?: array();
     }
 
     /**

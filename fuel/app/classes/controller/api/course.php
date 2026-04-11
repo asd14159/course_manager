@@ -1,6 +1,6 @@
 <?php
 
-class Controller_Api_Course extends Controller_Rest
+class Controller_Api_Course extends Controller_RestBase
 {
     // レスポンスの形式をJSONに設定
     protected $format = 'json';

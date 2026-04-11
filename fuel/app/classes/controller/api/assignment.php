@@ -7,7 +7,11 @@ class Controller_Api_Assignment extends Controller_RestBase
     public function get_all()
     {
         $assignments = \Model_Assignment::get_all_by_user($this->user_id);
-        return $this->response($assignments);
+        // return $this->response($assignments);
+        return $this->response([
+            'status'      => 'success',
+            'assignments' => $assignments,
+        ]);
     }
 
     public function get_list($course_id = null)
@@ -25,9 +29,23 @@ class Controller_Api_Assignment extends Controller_RestBase
             // 2. データの取得
             $assignments = \Model_Assignment::get_by_course($course_id);
 
+            /**
+             * 【修正ポイント】
+             * $assignments が null や false だった場合、FuelPHPは「データなし」と判断し
+             * 204 No Content を返してしまいます。
+             * これを強制的に「空の配列 (empty array)」にキャストすることで、
+             * サーバーは 200 OK と共に [] という文字列を返すようになります。
+             */
+            $result = !empty($assignments) ? array_values($assignments) : array();
+
+
+
             // 3. レスポンス（データが0件でも空の配列 [] を 200 OK で返す）
             // 常に一貫したデータ型（この場合は配列）を返すのがポイントです
-            return $this->response($assignments, 200);
+            return $this->response(array(
+                'status'      => 'success',
+                'assignments' => $result
+            ), 200);
 
         } catch (\Exception $e) {
             // 4. 万が一のサーバーエラー対応
