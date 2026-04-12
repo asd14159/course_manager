@@ -1,3 +1,148 @@
+/* --- ベース設定 --- */
+body {
+    font-family: 'Inter', 'Noto Sans JP', sans-serif;
+    margin: 0;
+    color: #1e293b;
+    background-color: #f8fafc; /* 全体的に少しグレーを混ぜると高級感が出ます */
+}
+
+/* --- グローバルヘッダー --- */
+.global-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    position: fixed; /* 固定ヘッダー */
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.header-inner {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ロゴ部分 */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand h1 {
+    /* サイズをガツンと大きく（元の1.25remから2rem程度へ） */
+    font-size: 2.2rem; 
+    
+    /* 非常に太くしてインパクトを出す */
+    font-weight: 900; 
+    
+    margin: 0;
+    
+    /* 文字の間隔を少し詰めると、ロゴっぽくスタイリッシュになります */
+    letter-spacing: -1.5px; 
+    
+    /* 行の高さを調整してヘッダー内での垂直位置を安定させる */
+    line-height: 1;
+    
+    /* わずかに傾斜をつけると「スピード感」や「フロー」が出てかっこいいです */
+    font-style: italic; 
+}
+
+/* 「Task」の部分の色（インディゴ系） */
+.brand h1 span {
+    color: #6366f1;
+    /* 必要ならspan側だけフォントを変えるなどもアリです */
+}
+
+/* マウスを乗せた時に少し浮き上がるような演出（任意） */
+.brand h1:hover {
+    filter: brightness(1.1);
+    cursor: default;
+}
+
+/* ユーザー情報・ナビ */
+.user-controls {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.user-badge {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+    line-height: 1.2;
+}
+
+.user-greeting {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.global-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-link:hover {
+    color: #6366f1;
+}
+
+/* ログアウトボタンを「いかにもボタン」にしないのが今風 */
+.btn-logout-modern {
+    background: #fee2e2;
+    color: #ef4444;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-logout-modern:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+/* メインコンテンツの余白調整（固定ヘッダー分） */
+.main-wrapper {
+    margin-top: 64px;
+    min-height: calc(100vh - 120px);
+}
+
+/* --- フッター --- */
+.global-footer {
+    padding: 2rem 0;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+
 /* 1. レイアウトの要：Flexboxの設定 */
 .dashboard {
     display: flex;             /* これで子要素（sidebarとmain）が横に並ぶ */
@@ -42,6 +187,96 @@
 .course-nav li.active a {
     color: white;
     font-weight: bold;
+}
+
+/* --- ヘッダー右側のレイアウト調整 --- */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* 要素間の隙間 */
+}
+
+/* --- モダンなセレクトボックス --- */
+.filter-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.filter-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 0.9rem;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.modern-select {
+    appearance: none; /* デフォルトの矢印を消す */
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 36px 10px 36px; /* アイコン分の余白を確保 */
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.modern-select:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+}
+
+.modern-select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* --- モダンな追加ボタン --- */
+.btn-modern-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1);
+}
+
+.btn-modern-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    filter: brightness(1.1);
+}
+
+.btn-modern-primary:active {
+    transform: translateY(0);
+}
+
+.plus-icon {
+    font-size: 1.2rem;
+    font-weight: 400;
+    line-height: 1;
+}
+
+/* レスポンシブ対応：スマホで並び替えをアイコン化する場合などに備え */
+@media (max-width: 640px) {
+    .header-right {
+        gap: 8px;
+    }
+    .btn-modern-primary {
+        padding: 10px 14px;
+    }
 }
 
 /* 3. メインエリアの装飾 */
@@ -244,6 +479,29 @@
     color: #ff4d4d; /* ホバー時に赤くしても良い */
 }
 
+/* 編集ボタンのスタイル（背景なし・透明に設定） */
+.course-edit-btn {
+    opacity: 0;           /* 普段は隠す（削除ボタンと同じ挙動にする場合） */
+    background: transparent; /* 背景を透明に */
+    border: none;         /* 枠線を消す */
+    cursor: pointer;      /* カーソルを指の形に */
+    font-size: 1.1em;
+    padding: 10px;
+    transition: all 0.2s;
+    outline: none;        /* クリック時の青い枠線を消す */
+}
+
+/* 授業（li）にマウスが乗ったら、編集ボタンを表示 */
+.course-item:hover .course-edit-btn {
+    opacity: 0.5;
+}
+
+/* ホバー時の挙動 */
+.course-edit-btn:hover {
+    opacity: 1 !important;
+    transform: scale(1.2); /* 少し大きくしてクリック感を出す */
+}
+
 .course-edit-form {
     display: flex;
     flex-direction: column;
@@ -269,3 +527,84 @@
 
 .save-btn { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; flex: 1; }
 .cancel-btn { background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+
+.edit-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+.edit-modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+}
+
+/* メイン行のスタイル */
+.assignment-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.assignment-row:hover {
+    background-color: #f1f5f9;
+}
+
+/* 詳細が開いている時の行の背景を変える（親子関係をわかりやすく） */
+.assignment-row.is-expanded {
+    background-color: #f8fafc;
+}
+
+/* 詳細行のスタイル */
+.assignment-detail-row {
+    background-color: #f8fafc;
+}
+
+.detail-container {
+    padding: 1rem 1.5rem;
+    border-left: 4px solid #3b82f6; /* 青色のアクセントライン */
+    margin: 5px 0;
+}
+
+.detail-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.detail-content {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #1e293b;
+    white-space: pre-wrap; /* 改行を反映させる */
+}
+
+/* 期限が近い課題の強調スタイル */
+.assignment-row.is-urgent {
+    background-color: #fff5f5 !important; /* 薄い赤色の背景 */
+}
+
+/* 1日前：警告（黄色〜薄い赤） */
+.assignment-row.is-urgent {
+    background-color: #fff5f5 !important;
+    color: #e53e3e;
+}
+
+/* 期限切れ：深刻（濃い赤 ＋ 白文字） */
+.assignment-row.is-overdue {
+    background-color: #c53030 !important; /* 濃い赤 */
+    color: #ffffff !important;           /* 文字を白にして読みやすく */
+    animation: blink 2s infinite;        /* 余裕があれば点滅させる */
+}
+
+/* 期限切れ行の各セルも白文字にする */
+.assignment-row.is-overdue td {
+    color: #ffffff !important;
+    font-weight: bold;
+}

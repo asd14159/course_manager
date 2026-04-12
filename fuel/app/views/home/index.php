@@ -80,11 +80,17 @@
                 <h2><span data-bind="text: headerTitle"></span></h2>
             </div>
             <div class="header-right">
-                <select class="form-select-sm" data-bind="value: currentSort">
-                    <option value="deadline">期限が近い順</option>
-                    <option value="priority">優先度が高い順</option>
-                </select>
-                <button class="btn-primary" data-bind="click: openModal">+ 課題を追加</button>
+                <div class="filter-group">
+                    <span class="filter-icon">🔃</span>
+                    <select class="modern-select" data-bind="value: currentSort">
+                        <option value="deadline">期限が近い順</option>
+                        <option value="priority">優先度が高い順</option>
+                    </select>
+                </div>
+                
+                <button class="btn-modern-primary" data-bind="click: openModal">
+                    <span class="plus-icon">+</span> 課題を追加
+                </button>
             </div>
         </header>
 
@@ -101,8 +107,17 @@
                     </tr>
                 </thead>
                 <tbody data-bind="foreach: assignments">
-                    <tr data-bind="css: { 'is-completed': is_completed_bool, ['priority-' + priority]: true }">
-                        <td class="col-status">
+                    <tr class="assignment-row" data-bind="
+                        click: $parent.toggleDetail, 
+                        css: { 
+                            'is-completed': is_completed_bool, 
+                            ['priority-' + priority]: true,
+                            'is-expanded': isVisible,
+                            'is-urgent': ($data.isUrgent && isUrgent()) && !is_completed_bool(),
+                            'is-overdue': isOverdue() && !is_completed_bool()
+                        }
+                    ">
+                        <td class="col-status" data-bind="click: function(d, e) { e.stopPropagation(); return true; }">
                             <input type="checkbox" data-bind="checked: is_completed_bool, disable: $parent.isUpdating">
                         </td>
                         <td class="col-title" data-bind="text: title"></td>
@@ -121,8 +136,61 @@
                             </div>
                         </td>
                     </tr>
+
+                    <tr class="assignment-detail-row" data-bind="
+                        visible: isVisible, 
+                        css: { 'is-completed': is_completed_bool } 
+                    ">
+                        <td colspan="6">
+                            <div class="detail-container">
+                                <h4 class="detail-label">詳細内容</h4>
+                                <div class="detail-content" data-bind="text: description"></div>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
+
+    
+            <div class="edit-modal-overlay" data-bind="visible: editingAssignment" style="display: none;">
+                <div class="edit-modal-content" data-bind="with: editingAssignment">
+                    <h3>課題の編集</h3>
+                    
+                    <div class="form-group">
+                        <label>課題名</label>
+                        <input type="text" data-bind="value: title" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>詳細内容（メモ）</label>
+                        <textarea data-bind="value: description" class="form-control" rows="4"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>期限</label>
+                        <input type="datetime-local" data-bind="value: deadline" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>優先度</label>
+                        <select data-bind="value: priority" class="form-control">
+                            <option value="1">Lv.1 (低)</option>
+                            <option value="2">Lv.2 (中)</option>
+                            <option value="3">Lv.3 (高)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>メモ</label>
+                        <textarea data-bind="value: description" class="form-control"></textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" data-bind="click: $root.saveAssignmentUpdate">保存する</button>
+                        <button class="btn btn-secondary" data-bind="click: function() { $root.editingAssignment(null); }">キャンセル</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 </div>

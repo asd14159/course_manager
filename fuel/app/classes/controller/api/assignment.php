@@ -140,6 +140,36 @@ class Controller_Api_Assignment extends Controller_RestBase
         return $this->response(array('status' => 'success'), 200);
     }
 
+    public function post_update($id = null) {
+        // 入力値を受け取る
+        $val = \Input::post();
+
+        // 1. バリデーション（できれば実装したい！）
+        if (empty($val['title'])) {
+            return $this->response(array('status' => 'error', 'message' => 'タイトルは必須です'), 400);
+        }
+        // 3. JSのparams.append('id', data.id) で送っている場合は、ここでも id を取得する
+        $update_id = !empty($id) ? $id : \Input::post('id');
+
+        if (empty($update_id)) {
+            return $this->response(array('status' => 'error', 'message' => 'IDが指定されていません'), 400);
+        }
+        
+        // DBクラスを使って更新（CRUDのUにあたります）
+        $result = \DB::update('assignments')
+            ->set([
+                'title'       => $val['title'],
+                'description' => $val['description'],
+                'deadline'    => $val['deadline'],
+                'priority'    => $val['priority'],
+                'updated_at'  => date('Y-m-d H:i:s'),
+            ])
+            ->where('id', '=', $update_id)
+            ->execute();
+
+        return $this->response(['status' => 'success']);
+    }
+
     public function post_delete()
     {
         $id = \Input::post('id');

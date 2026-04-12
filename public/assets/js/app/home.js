@@ -8,11 +8,11 @@ document.addEventListener('DOMContentLoaded', function() {
         self.currentSort = ko.observable('deadline'); 
         self.isUpdating = ko.observable(false); 
         self.isModalVisible = ko.observable(false);
-        // 1. 変数の定義（self = this; のすぐ下あたり）
         self.editingCourseId = ko.observable(null);
+        self.editingAssignment = ko.observable(null);
 
-        // 追加フォーム専用のObservable（ここだけにまとめます）
-        self.selectedCourseForAdd = ko.observable(""); // ここで1回だけ定義
+        // 追加フォームに入力された値を一時的に保管しておく場所
+        self.selectedCourseForAdd = ko.observable("");
         self.newTitle = ko.observable('');
         self.newDescription = ko.observable('');
         self.newDeadline = ko.observable('');
@@ -27,11 +27,62 @@ document.addEventListener('DOMContentLoaded', function() {
             return course ? course.name + ' の課題' : 'すべての課題';
         });
 
-        // 2. 編集開始
+        self.isNewCourseMode = ko.computed(() => {
+            return self.selectedCourseForAdd() === "new";
+        });
+
+        // --- 3. 内部ロジック（Sorting/Helper) ---
+        self.sortAssignments = function() {
+            const type = self.currentSort();
+            self.assignments.sort((a, b) => {
+                const statusA = Number(a.is_completed);
+                const statusB = Number(b.is_completed);
+                if (statusA !== statusB) return statusA - statusB;
+
+                if (type === 'deadline') {
+                    const dateA = a.deadline_formatted || "";
+                    const dateB = b.deadline_formatted || "";
+                    return dateA.localeCompare(dateB);
+                } else if (type === 'priority') {
+                    return b.priority - a.priority;
+                }
+                return 0;
+            });
+        };
+
+        self.currentSort.subscribe(() => self.sortAssignments());
+
+        // --- 4. モーダル操作 ---
+        self.openModal = function() {
+            self.editingAssignment(null);// 編集データをクリア
+            self.isModalVisible(true);
+        };
+
+        self.closeModal = function() {
+            self.isModalVisible(false);
+            // Observableをリセット
+            self.selectedCourseForAdd("");
+            self.newTitle('');
+            self.newDescription('');
+            self.newDeadline('');
+            self.newPriority('2');
+            self.newCourseName('');
+        };
+
+        self.toggleDetail = function(item) {
+            item.isVisible(!item.isVisible()); // クリックで開閉を切り替え
+        };
+
         self.startEdit = function(id, event) {
             if (event && event.stopPropagation) event.stopPropagation();
                 self.editingCourseId(id);
         };
+
+
+
+
+
+        
 
         // 3. 編集保存
         self.saveEdit = function(id, event) {
@@ -67,11 +118,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => console.error('Error:', error));
         };
 
-        // 【修正ポイント】ここで定義！
-        self.isNewCourseMode = ko.computed(() => {
-            return self.selectedCourseForAdd() === "new";
-        });
-
         // --- 3. 授業選択メソッド ---
         self.selectAllCourses = function() {
             self.loadAssignments(null);
@@ -82,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // --- 4. モーダル操作 ---
         self.openModal = function() {
+            self.editingAssignment(null);// 編集データをクリア
             self.isModalVisible(true);
         };
 
@@ -96,25 +143,6 @@ document.addEventListener('DOMContentLoaded', function() {
             self.newCourseName('');
         };
 
-        // --- 5. 並び替えロジック ---
-        self.sortAssignments = function() {
-            const type = self.currentSort();
-            self.assignments.sort((a, b) => {
-                const statusA = Number(a.is_completed);
-                const statusB = Number(b.is_completed);
-                if (statusA !== statusB) return statusA - statusB;
-
-                if (type === 'deadline') {
-                    const dateA = a.deadline_formatted || "";
-                    const dateB = b.deadline_formatted || "";
-                    return dateA.localeCompare(dateB);
-                } else if (type === 'priority') {
-                    return b.priority - a.priority;
-                }
-                return 0;
-            });
-        };
-        self.currentSort.subscribe(() => self.sortAssignments());
 
         // --- 6. API通信 ---
 
@@ -145,6 +173,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     const targetData = (data && data.assignments) ? data.assignments : [];
 
                     const formattedData = targetData.map(item => {
+
+                        // 詳細の表示状態を管理するスイッチを初期値 false (閉じている) で作成
+                        item.isVisible = ko.observable(false);
+
+                        const now = new Date();
+                        const deadline = new Date(item.deadline);
+                        const diffHours = (deadline - now) / (1000 * 60 * 60);
+
+                        // 24時間以内かつ期限を過ぎていない
+                        item.isUrgent = ko.observable(diffHours > 0 && diffHours <= 24);
+
+                        // 期限を過ぎている（マイナス）
+                        item.isOverdue = ko.observable(diffHours <= 0);
                         
                         // ① まず先に Observable（センサー）を作る！
                         const isCompleted = Number(item.is_completed) === 1;
@@ -241,45 +282,91 @@ document.addEventListener('DOMContentLoaded', function() {
 //         });
 // };
 
-        self.deleteCourse = function(id, name, event) {
-            if (event && event.stopPropagation) event.stopPropagation();
+        // --- 課題の編集用メソッド ---
 
-            if (!confirm(`授業「${name}」を削除しますか？`)) return;
+        // 1. 編集開始
+        self.editAssignment = function(item) {
+            self.isModalVisible(false); // ★重要：新規追加モーダルを強制的に閉じる
+            // ko.toJS(item) で「今の値」のコピーを作成してセット
+            self.editingAssignment(ko.toJS(item));
+            // 必要ならここでモーダルを表示するフラグをtrueにする
+        };
 
-            console.log("削除リクエスト送信開始: ID =", id); // デバッグ用
+        // 2. 編集キャンセル
+        self.cancelEditAssignment = function() {
+            self.editingAssignment(null);
+            self.isModalVisible(false);
+        };
 
+        // 3. 編集保存
+        self.saveAssignmentUpdate = function() {
+            const data = self.editingAssignment(); // 下書きデータ取得
+
+            // デバッグ用：ここで title が本当に入っているか確認！
+            console.log("送信直前のデータ:", data);
+
+            if (!data || !data.title) {
+                alert("タイトルを入力してください");
+                return;
+            }
+            
             const params = new URLSearchParams();
-            params.append('id', id);
+            params.append('id', data.id);
+            params.append('title', data.title);
+            params.append('description', data.description);
+            params.append('deadline', data.deadline);
+            params.append('priority', data.priority);
 
-            fetch('/api/course/delete.json', {
+            fetch('/api/assignment/update.json', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params
             })
-            .then(async response => {
-                // デバッグポイント：レスポンスの状態を確認
-                console.log("ステータスコード:", response.status);
-                
-                if (!response.ok) {
-                    // サーバーがエラー（500など）を返した場合、その中身（PHPのエラー文）を読み出す
-                    const errorText = await response.text();
-                    throw new Error(`サーバーエラー(${response.status}): ${errorText}`);
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    alert("課題を更新しました");
+                    self.editingAssignment(null); // モード終了
+                    self.loadAssignments(self.selectedCourse()?.id); // 画面をリフレッシュ
+                } else {
+                    alert("エラー: " + res.message);
                 }
+            })
+            .catch(err => alert("通信エラーが発生しました"));
+        };
+
+
+        self.deleteCourse = function(id, name) {
+            if (!confirm(`授業「${name}」を削除しますか？\n※この授業内の課題もすべて削除されます。`)) {
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.append('id', id);
+
+            // 送信先を新しく作った course.php の方に変える！
+            fetch('/api/course/delete.json', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            })
+            // ...あとの処理は課題削除の時と同じ
+            .then(response => {
+                if (!response.ok) throw new Error('削除に失敗しました');
                 return response.json();
             })
             .then(data => {
-                console.log("受信データ:", data);
                 if (data.status === 'success') {
-                    alert("削除完了！");
+                    alert("削除が完了しました");
+                    // 画面をリロードして最新状態にする
                     window.location.reload();
                 } else {
-                    alert("サーバーからの拒否: " + data.message);
+                    alert("エラー: " + data.message);
                 }
             })
-            .catch(error => {
-                // デバッグポイント：エラーの詳細をアラートで出す
-                console.error("詳細エラー:", error);
-                alert("デバッグ情報:\n" + error.message);
+            .catch(error => {       
+                console.error('Error:', error);
+                alert("通信エラーが発生しました");
             });
         };
 
@@ -438,40 +525,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // --- 初期化 ---
         self.loadAssignments(null);
     }
-
-    self.deleteCourse = function(id, name) {
-        if (!confirm(`授業「${name}」を削除しますか？\n※この授業内の課題もすべて削除されます。`)) {
-            return;
-        }
-
-        const params = new URLSearchParams();
-        params.append('id', id);
-
-        // 送信先を新しく作った course.php の方に変える！
-        fetch('/api/course/delete.json', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params
-        })
-        // ...あとの処理は課題削除の時と同じ
-        .then(response => {
-            if (!response.ok) throw new Error('削除に失敗しました');
-            return response.json();
-        })
-        .then(data => {
-            if (data.status === 'success') {
-                alert("削除が完了しました");
-                // 画面をリロードして最新状態にする
-                window.location.reload();
-            } else {
-                alert("エラー: " + data.message);
-            }
-        })
-        .catch(error => {       
-            console.error('Error:', error);
-            alert("通信エラーが発生しました");
-        });
-    };
 
     ko.applyBindings(new HomeViewModel());
 });
