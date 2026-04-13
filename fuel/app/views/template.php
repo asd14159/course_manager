@@ -28,7 +28,7 @@
     </header>
 
     <div class="container main-wrapper">
-        <?php echo $content; ?>
+        <?php echo (string) $content; ?>
     </div>
 
     <footer class="global-footer">

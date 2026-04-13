@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const response = await fetch('/api/course/list.json');
                 if (!response.ok) throw new Error("Course Load Error");
                 const data = await response.json();
-                
-                const mappedCourses = data.map(course => {
+
+                const mappedCourses = data.courses.map(course => {
                     return {
                         id: course.id,
                         name: ko.observable(course.name || ""),
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         self.loadAssignments = function(courseId, courseName) {
             self.assignments([]);
             self.selectedCourse(courseId ? { id: courseId, name: courseName } : null);
-            const url = courseId ? `/api/assignment/list/${courseId}.json` : '/api/assignment/all.json';
+            const url = courseId ? `/api/assignment/list/${courseId}` : '/api/assignment/all.json';
             
             fetch(url)
                 .then(response => {
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 assignment.isSending = true;
 
-                const response = await fetch('/api/assignment/update_status.json', {
+                const response = await fetch('/api/assignment/update_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: assignment.id, is_completed: newStatus })
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const data = await response.json();
 
                     if (data.status === 'success') {
-                        self.courses.remove(course);
+                        await self.loadCourses();
                         self.loadAssignments(null); 
                         alert("削除が完了しました");
                     } else {
@@ -429,10 +429,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         //課題の編集開始
         self.editAssignment = function(item) {
-            self.isModalVisible(false); // ★重要：新規追加モーダルを強制的に閉じる
-            // ko.toJS(item) で「今の値」のコピーを作成してセット
+            self.isModalVisible(false); //新規追加モーダルを強制的に閉じる
             self.editingAssignment(ko.toJS(item));
-            // 必要ならここでモーダルを表示するフラグをtrueにする
         };
 
         // 課題の編集キャンセル

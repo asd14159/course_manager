@@ -1,67 +1,53 @@
-# インターン課題環境構築手順
+# 課題条件
 
-## Dockerの基本知識
-Dockerの基本的な概念については、以下のリンクを参考にしてください：
-- [Docker入門（1）](https://qiita.com/Sicut_study/items/4f301d000ecee98e78c9)
-- [Docker入門（2）](https://qiita.com/takusan64/items/4d622ce1858c426719c7)
+## 1.サーバサイド言語はPHPで、フレームワークのFuelPHPを使用すること
+- FuelPHPのMVC構成で実装
 
-## セットアップ手順
+## 2.beforeメソッドを使う
+- fuel/app/classes/controller/base.php
+- 全メソッドの実行前に呼び出されるログインチェックを実装
 
-1. **リポジトリをクローン**
-   ```bash
-   git clone <リポジトリURL>
-   ```
+## 3. configファイルをカスタマイズする
+- fuel/app/config/config.php
+- Security::htmlentities を設定し、XSS対策を適用
 
-2. **dockerディレクトリに移動**
-   ```bash
-   cd docker
-   ```
+## 4.sessionやcookieを使う
+- fuel/app/classes/controller/auth.php
+- Authパッケージを利用し、ユーザーの認証状態をセッションで管理。
 
-3. **データベース名の設定**
-   `docker-compose.yml` 内の `db` サービスにある `MYSQL_DATABASE` の値を、各自任意のデータベース名に設定してください。
-   
-   例:
-   ```yaml
-   environment:
-     MYSQL_ROOT_PASSWORD: root
-     MYSQL_DATABASE: <your_database_name>  # 任意のデータベース名を指定
-   ```
+## 5.ネームスペースを使う
+- 今回は未使用
 
-4. **Dockerイメージのビルド**
-   ```bash
-   docker-compose build
-   ```
+## 6.\（バックスラッシュ）を使ったグローバル名前空間へのアクセス
+- FuelPHPのコアクラス（Input、Auth、 Response、View、DB等）や、PHP標準の関数・クラスを呼び出す際に使用
 
-5. **コンテナの起動**
-   ```bash
-   docker-compose up -d
-   ```
-6. **ブラウザからlocalhostにアクセス**
+## 7.データベースとのやり取りはDBクラスを使うこと
+- fuel/app/classes/model/user.php
+- fuel/app/classes/model/course.php
+- fuel/app/classes/model/assignment.php
 
-## PHP周りのバージョン
-- **PHP**: 7.3
-- **FuelPHP**: 1.8
+## 8.1:n関係のテーブル構造があること
+- users : courses = 1 : n
+- courses : assignmet = 1: n
+- user_id、course_idで紐づけ
 
-## ログについて
-- **アクセスログ**: Dockerのコンテナのログ
-- **FuelPHPのエラーログ**: /var/www/html/intern_kadai/fuel/app/logs/
-  - 年月日ごとにログが管理されている
-  - tail -f {見たいログファイル}でログを出力
+## 9.CRUDの機能が網羅されている
+- /api/assignment/
+- /api/course/
+- すべての操作は非同期通信（fetch API）で実装
+- Controller_Rest を利用し、JSON形式でレスポンスを統一
 
-## MySQLコンテナ設定
-このプロジェクトには、MySQLを使用するDBコンテナが含まれています。設定は以下の通りです。
+## 10.フロントエンドのライブラリにknockout.jsが使用されている
+- public/assets/js/app/home.jsにて ViewModel（HomeViewModel）を定義
+- ページ遷移を行わず、fetch APIによる非同期通信と組み合わせた
 
-- **MySQLバージョン**: 8.0
-- **ポート**: `3306`
-- **環境変数**:
-  - `MYSQL_ROOT_PASSWORD`: root
-  - `MYSQL_DATABASE`: 各自設定したデータベース名
+## 11.UXを考慮して一部動的なUIが実装されている（非同期処理）
+- public/assets/js/app/home.js
+- fuel/app/views/home/index.phpで実装
 
-### アクセス情報
-- **ホスト**: `localhost`
-- **ポート**: `3306`
-- **ユーザー名**: `root`
-- **パスワード**: `root`
-- **データベース名**: 各自設定した名前
+## 12.GitHubでコードの管理を行う
+- 変更ごと更新
 
-# course_manager
+## 13. セキュリティ資料を読み必要な実装を行う
+- フォーム送信時にCSRFトークンを利用
+- 各種バリデーションを実装

@@ -11,7 +11,6 @@
              <ul data-bind="foreach: courses">
                 <li class="course-item" data-bind="css: { active: $root.selectedCourse() && $root.selectedCourse().id == id }">
                     <div class="course-item-inner">
-                        
                         <div class="course-view-mode" data-bind="visible: $root.editingCourseId() != id">
                             <a href="#" class="course-info" data-bind="click: function() { $root.selectCourse(id, name()) }">
                                 <div class="course-name" data-bind="text: name"></div>
@@ -20,13 +19,10 @@
                                     <span class="course-period" data-bind="text: period() + '限'"></span>
                                 </div>
                             </a>
-
                             <button class="course-edit-btn" data-bind="click: function(d, e) { $root.startEdit(id, e) }">✏️</button>
                             <button class="course-delete-btn" data-bind="click: function() { $root.deleteCourse($data) }">🗑️</button>
-
-                        <div class="course-edit-form" data-bind="visible: $root.editingCourseId() == id">
+                        </div> <div class="course-edit-form" data-bind="visible: $root.editingCourseId() == id">
                             <input type="text" class="form-control" data-bind="value: name"> 
-                            
                             <div class="select-group">
                                 <select data-bind="value: day_of_week">
                                     <option value="1">月曜日</option>
@@ -36,18 +32,10 @@
                                     <option value="5">金曜日</option>
                                     <option value="6">土曜日</option>
                                 </select>
-
                                 <select data-bind="value: period">
                                     <option value="1">1限</option>
-                                    <option value="2">2限</option>
-                                    <option value="3">3限</option>
-                                    <option value="4">4限</option>
-                                    <option value="5">5限</option>
-                                    <option value="6">6限</option>
-                                    <option value="7">7限</option>
-                                </select>
+                                    </select>
                             </div>
-
                             <div class="edit-actions">
                                 <button class="save-btn" data-bind="click: $root.saveEdit">保存</button>
                                 <button class="cancel-btn" data-bind="click: function() { $root.editingCourseId(null) }">中止</button>
@@ -96,7 +84,6 @@
                         click: $parent.toggleDetail, 
                         css: { 
                             'is-completed': is_completed_bool, 
-                            ['priority-' + priority]: true,
                             'is-expanded': isVisible,
                             'is-urgent': ($data.isUrgent && isUrgent()) && !is_completed_bool(),
                             'is-overdue': isOverdue() && !is_completed_bool()
@@ -163,11 +150,6 @@
                             <option value="2">Lv.2 (中)</option>
                             <option value="3">Lv.3 (高)</option>
                         </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>メモ</label>
-                        <textarea data-bind="value: description" class="form-control"></textarea>
                     </div>
 
                     <div class="button-group">

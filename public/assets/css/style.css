@@ -3,17 +3,17 @@ body {
     font-family: 'Inter', 'Noto Sans JP', sans-serif;
     margin: 0;
     color: #1e293b;
-    background-color: #f8fafc; /* 全体的に少しグレーを混ぜると高級感が出ます */
+    background-color: #f8fafc;
 }
 
-/* --- グローバルヘッダー --- */
+/*グローバルヘッダー*/
 .global-header {
     background: #ffffff;
     border-bottom: 1px solid #e2e8f0;
     height: 64px;
     display: flex;
     align-items: center;
-    position: fixed; /* 固定ヘッダー */
+    position: fixed;
     top: 0;
     width: 100%;
     z-index: 1000;
@@ -37,31 +37,26 @@ body {
 }
 
 .brand h1 {
-    /* サイズをガツンと大きく（元の1.25remから2rem程度へ） */
-    font-size: 2.2rem; 
     
-    /* 非常に太くしてインパクトを出す */
+    font-size: 2.2rem; 
+
     font-weight: 900; 
     
     margin: 0;
     
-    /* 文字の間隔を少し詰めると、ロゴっぽくスタイリッシュになります */
     letter-spacing: -1.5px; 
     
-    /* 行の高さを調整してヘッダー内での垂直位置を安定させる */
     line-height: 1;
     
-    /* わずかに傾斜をつけると「スピード感」や「フロー」が出てかっこいいです */
     font-style: italic; 
 }
 
-/* 「Task」の部分の色（インディゴ系） */
+/* 「Task」の部分の色 */
 .brand h1 span {
     color: #6366f1;
-    /* 必要ならspan側だけフォントを変えるなどもアリです */
 }
 
-/* マウスを乗せた時に少し浮き上がるような演出（任意） */
+/* マウスを乗せた時に少し浮き上がるような演出 */
 .brand h1:hover {
     filter: brightness(1.1);
     cursor: default;
@@ -109,7 +104,7 @@ body {
     color: #6366f1;
 }
 
-/* ログアウトボタンを「いかにもボタン」にしないのが今風 */
+/* ログアウトボタン */
 .btn-logout-modern {
     background: #fee2e2;
     color: #ef4444;
@@ -143,18 +138,18 @@ body {
 }
 
 
-/* 1. レイアウトの要：Flexboxの設定 */
+/*  レイアウト：Flexboxの設定 */
 .dashboard {
-    display: flex;             /* これで子要素（sidebarとmain）が横に並ぶ */
-    min-height: 100vh;         /* 画面いっぱいの高さ */
+    display: flex;        
+    min-height: 100vh;       
     background-color: #f4f7f6;
     font-family: sans-serif;
 }
 
-/* 2. サイドバーの装飾 */
+/* サイドバーの装飾 */
 .sidebar {
-    width: 250px;              /* 幅を固定 */
-    background-color: #2c3e50; /* 濃い紺色 */
+    width: 250px;             
+    background-color: #2c3e50;
     color: white;
 }
 
@@ -164,7 +159,7 @@ body {
 }
 
 .course-nav ul {
-    list-style: none;          /* ポッチを消す */
+    list-style: none;      
     padding: 0;
 }
 
@@ -172,8 +167,8 @@ body {
     display: block;
     padding: 15px 20px;
     color: #bdc3c7;
-    text-decoration: none;     /* 下線を消す */
-    transition: 0.3s;          /* 変化を滑らかに */
+    text-decoration: none;   
+    transition: 0.3s;    
 }
 
 .course-nav li:hover {
@@ -181,7 +176,7 @@ body {
 }
 
 .course-nav li.active {
-    background-color: #3498db; /* 選択中は青色に */
+    background-color: #3498db; 
 }
 
 .course-nav li.active a {
@@ -189,14 +184,14 @@ body {
     font-weight: bold;
 }
 
-/* --- ヘッダー右側のレイアウト調整 --- */
+/* ヘッダー右側のレイアウト調整 */
 .header-right {
     display: flex;
     align-items: center;
-    gap: 16px; /* 要素間の隙間 */
+    gap: 16px; 
 }
 
-/* --- モダンなセレクトボックス --- */
+/*モダンなセレクトボックス*/
 .filter-group {
     position: relative;
     display: flex;
@@ -212,11 +207,11 @@ body {
 }
 
 .modern-select {
-    appearance: none; /* デフォルトの矢印を消す */
+    appearance: none;
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 10px 36px 10px 36px; /* アイコン分の余白を確保 */
+    padding: 10px 36px 10px 36px; 
     font-size: 0.9rem;
     font-weight: 500;
     color: #475569;
@@ -236,7 +231,7 @@ body {
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-/* --- モダンな追加ボタン --- */
+/* 追加ボタン*/
 .btn-modern-primary {
     display: inline-flex;
     align-items: center;
@@ -269,7 +264,7 @@ body {
     line-height: 1;
 }
 
-/* レスポンシブ対応：スマホで並び替えをアイコン化する場合などに備え */
+/* レスポンシブ対応 */
 @media (max-width: 640px) {
     .header-right {
         gap: 8px;
@@ -279,23 +274,23 @@ body {
     }
 }
 
-/* 3. メインエリアの装飾 */
+/*メインエリアの装飾 */
 .main-content {
-    flex: 1;                   /* 残りの幅をすべて使う */
+    flex: 1;              
     padding: 40px;
 }
 
 .main-header {
     display: flex;
-    justify-content: space-between; /* 左右に振り分ける */
+    justify-content: space-between; 
     align-items: center;
     margin-bottom: 30px;
 }
 
-/* 4. テーブルのデザイン（IT専攻なら表形式に慣れよう） */
+/*テーブルのデザイン */
 .assignment-table {
     width: 100%;
-    border-collapse: collapse; /* 境界線を重ねる */
+    border-collapse: collapse; 
     background: white;
     border-radius: 8px;
     overflow: hidden;
@@ -315,19 +310,14 @@ body {
     text-transform: uppercase;
 }
 
-/* 5. 状態による出し分け（ここはこだわり！） */
+/* 状態による出し分け */
 .is-completed {
     background-color: #f9f9f9;
     color: #bdc3c7;
-    text-decoration: line-through; /* 完了したら打ち消し線 */
+    text-decoration: line-through;
 }
 
-/* 優先度Lv.1（高）は左側に赤い線を出す */
-.priority-1 {
-    border-left: 4px solid #e74c3c;
-}
-
-/* モーダル背景（画面全体を覆う） */
+/* モーダル背景（画面全体） */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0;
@@ -369,14 +359,8 @@ body {
     text-decoration: line-through;
 }
 
-.priority-3 {
-    border-left: 5px solid #ff4d4d; /* 優先度高は赤 */
-}
-
 /* 新規授業入力エリアの基本スタイル */
 .new-course-fields {
-    /* display: none; デフォルトは非表示 */
-
     background: #f0f7ff;
     padding: 15px;
     border-radius: 8px;
@@ -389,7 +373,7 @@ body {
     display: block;
 }
 
-/* モーダル内の特別な選択肢の装飾（CSSで指定） */
+/* モーダル内の特別な選択肢の装飾 */
 #new-course-id option[value="new"] {
     color: #007bff;
     font-weight: bold;
@@ -404,7 +388,7 @@ body {
     flex: 1;
 }
 
-/* 授業名を太く、少し大きく */
+/* 授業名文字大きさ */
 .course-name {
     display: block;
     font-weight: bold;
@@ -417,10 +401,10 @@ body {
     display: block;
     font-size: 0.85em;
     color: #666;
-    margin-top: 2px; /* 授業名との隙間 */
+    margin-top: 2px;
 }
 
-/* 曜日と時限の間に少し隙間をあける */
+/* 曜日と時限の間*/
 .course-day {
     margin-right: 5px;
 }
@@ -449,16 +433,16 @@ body {
 
 /* 授業情報のリンクを広げる */
 .course-info {
-    flex-grow: 1; /* 左側を埋め尽くす */
+    flex-grow: 1;
     text-decoration: none;
     color: inherit;
     padding: 10px;
     display: block;
 }
 
-/* 削除ボタンのスタイル */
+/* 削除ボタン */
 .course-delete-btn {
-    opacity: 0; /* 普段は隠す */
+    opacity: 0; 
     background: transparent;
     border: none;
     cursor: pointer;
@@ -467,28 +451,27 @@ body {
     transition: all 0.2s;
 }
 
-/* 授業（li）にマウスが乗ったら、ゴミ箱をうっすら表示 */
+/* 授業にマウスが乗ったらゴミ箱をうっすら表示 */
 .course-item:hover .course-delete-btn {
     opacity: 0.5;
 }
 
-/* ゴミ箱の上にマウスが乗ったら、はっきり表示 */
+/* ゴミ箱の上にマウスが乗ったらはっきり表示 */
 .course-delete-btn:hover {
     opacity: 1 !important;
     transform: scale(1.2);
-    color: #ff4d4d; /* ホバー時に赤くしても良い */
+    color: #ff4d4d; 
 }
 
-/* 編集ボタンのスタイル（背景なし・透明に設定） */
+/* 編集ボタンのスタイル（背景なし・透明） */
 .course-edit-btn {
-    opacity: 0;           /* 普段は隠す（削除ボタンと同じ挙動にする場合） */
-    background: transparent; /* 背景を透明に */
-    border: none;         /* 枠線を消す */
-    cursor: pointer;      /* カーソルを指の形に */
+    opacity: 0;          
+    border: none;         
+    cursor: pointer;    
     font-size: 1.1em;
     padding: 10px;
     transition: all 0.2s;
-    outline: none;        /* クリック時の青い枠線を消す */
+    outline: none;        
 }
 
 /* 授業（li）にマウスが乗ったら、編集ボタンを表示 */
@@ -499,7 +482,7 @@ body {
 /* ホバー時の挙動 */
 .course-edit-btn:hover {
     opacity: 1 !important;
-    transform: scale(1.2); /* 少し大きくしてクリック感を出す */
+    transform: scale(1.2); 
 }
 
 .course-edit-form {
@@ -567,7 +550,7 @@ body {
 
 .detail-container {
     padding: 1rem 1.5rem;
-    border-left: 4px solid #3b82f6; /* 青色のアクセントライン */
+    border-left: 4px solid #3b82f6; 
     margin: 5px 0;
 }
 
@@ -582,12 +565,12 @@ body {
     font-size: 0.95rem;
     line-height: 1.6;
     color: #1e293b;
-    white-space: pre-wrap; /* 改行を反映させる */
+    white-space: pre-wrap; 
 }
 
 /* 期限が近い課題の強調スタイル */
 .assignment-row.is-urgent {
-    background-color: #fff5f5 !important; /* 薄い赤色の背景 */
+    background-color: #fff5f5 !important; 
 }
 
 /* 1日前：警告（黄色〜薄い赤） */
@@ -598,9 +581,9 @@ body {
 
 /* 期限切れ：深刻（濃い赤 ＋ 白文字） */
 .assignment-row.is-overdue {
-    background-color: #c53030 !important; /* 濃い赤 */
-    color: #ffffff !important;           /* 文字を白にして読みやすく */
-    animation: blink 2s infinite;        /* 余裕があれば点滅させる */
+    background-color: #c53030 !important; 
+    color: #ffffff !important;           
+    animation: blink 2s infinite;  
 }
 
 /* 期限切れ行の各セルも白文字にする */

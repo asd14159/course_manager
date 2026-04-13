@@ -8,7 +8,7 @@ class Controller_Base extends \Controller_Template
     {
         parent::before();
 
-        // 1. 無限リダイレクト防止策 (重要！)
+        // 無限リダイレクト防止策
         // 現在のコントローラ名を取得し、ログイン・新規登録画面ならチェックをスキップする
         $current_controller = \Request::active()->controller;
         
@@ -20,10 +20,10 @@ class Controller_Base extends \Controller_Template
             }
         }
 
-        // 2. ログイン済みの場合の処理
+        //ログイン済みの場合の処理
         if (\Auth::check())
         {
-            // 名前だけでなくIDも取得しておくと、後のDB操作（Model::findなど）で便利
+            // 名前だけでなくIDも取得しておく
             $user_info = \Auth::get_user_id();
             $this->user_id = $user_info[1]; 
             
