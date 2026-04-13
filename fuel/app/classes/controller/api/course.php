@@ -5,6 +5,43 @@ class Controller_Api_Course extends Controller_RestBase
     // レスポンスの形式をJSONに設定
     protected $format = 'json';
 
+    /**
+     * 授業一覧の取得
+     * URL: /api/course/list.json (GET)
+     */
+    public function get_list()
+    {
+        $auth_info = \Auth::get_user_id();
+
+        // ログインしていない場合は空の配列などを返す処理が必要（安全策）
+        if (!$auth_info) {
+             return $this->response(array(), 200);
+        }
+        $current_user_id = $auth_info[1];
+        
+        try {
+            // 1. データベースから全授業を取得
+            // order_by を入れることで、曜日順や時限順に綺麗に並びます
+            $courses = \DB::select()
+                ->from('courses')
+                ->where('user_id', '=', $current_user_id)
+                ->order_by('day_of_week', 'asc')
+                ->order_by('period', 'asc')
+                ->execute()
+                ->as_array(); // 扱いやすいように配列に変換
+
+            // 2. 取得したデータをJSONとしてレスポンス
+            // Controller_Rest を継承しているので、これだけでJSONになります
+            return $this->response($courses, 200);
+
+        } catch (\Exception $e) {
+            return $this->response(array(
+                'status' => 'error',
+                'message' => '授業情報の取得に失敗しました: ' . $e->getMessage()
+            ), 500);
+        }
+    }
+
 //     /**
 //      * 授業の削除処理
 //      * URL: /api/course/delete.json

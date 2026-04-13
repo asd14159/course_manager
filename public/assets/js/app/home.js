@@ -3,7 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const self = this; 
         
         // --- 1. 状態管理（Observable） ---
-        self.assignments = ko.observableArray([]); 
+        self.assignments = ko.observableArray([]);
+        self.courses = ko.observableArray([]); // 授業一覧を格納する場所 
         self.selectedCourse = ko.observable(null); 
         self.currentSort = ko.observable('deadline'); 
         self.isUpdating = ko.observable(false); 
@@ -21,7 +22,336 @@ document.addEventListener('DOMContentLoaded', function() {
         self.newCourseDay = ko.observable('1');
         self.newCoursePeriod = ko.observable('1');
 
-        // --- 2. 表示用プロパティ（Computed） ---
+        // --- 2. API通信(GET) ---
+        self.loadCourses = async function() {
+            try {
+                const response = await fetch('/api/course/list.json');
+                if (!response.ok) throw new Error("Course Load Error");
+                const data = await response.json();
+                
+                const mappedCourses = data.map(course => {
+                    return {
+                        id: course.id,
+                        name: ko.observable(course.name || ""),
+                        day_of_week: ko.observable(course.day_of_week || "1"),
+                        period: ko.observable(course.period || "1")
+                    };
+                });
+                self.courses(mappedCourses);
+            } catch (error) {
+                console.error("授業の読み込みに失敗:", error);
+            }
+        };
+
+        self.loadAssignments = function(courseId, courseName) {
+            self.assignments([]);
+            self.selectedCourse(courseId ? { id: courseId, name: courseName } : null);
+            const url = courseId ? `/api/assignment/list/${courseId}.json` : '/api/assignment/all.json';
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) throw new Error("HTTP error");
+                    return response.text();
+                })
+
+                //textに変換したのは授業が課題を持たない状況で[]が返ってくるため
+                .then(text => {
+                    if (!text || text.trim() === "") {
+                        console.warn("サーバーからの返却値が空でした");
+                        return { status: "success", assignments: [] }; 
+                    }
+                    // 中身がある時だけ JSON に変換する
+                    return JSON.parse(text);
+                })
+
+                .then(data => {
+                    const targetData = (data && data.assignments) ? data.assignments : [];
+
+                    const formattedData = targetData.map(item => {
+
+                        // 詳細の表示状態を管理するスイッチを初期値 false (閉じている) で作成
+                        item.isVisible = ko.observable(false);
+
+                        const now = new Date();
+                        const deadline = new Date(item.deadline);
+                        const diffHours = (deadline - now) / (1000 * 60 * 60);
+
+                        // 24時間以内かつ期限を過ぎていない
+                        item.isUrgent = ko.observable(diffHours > 0 && diffHours <= 24);
+
+                        // 期限を過ぎている（マイナス）
+                        item.isOverdue = ko.observable(diffHours <= 0);
+
+                        //課題通信中フラグ
+                        item.isSending = false;
+                        
+                        //チェックボックスの判定・サーバーへの通信
+                        const isCompleted = Number(item.is_completed) === 1;
+                        item.is_completed_bool = ko.observable(isCompleted);
+                        item.is_completed_bool.subscribe((newValue) => {
+                            const status = newValue ? 1 : 0;
+                            item.is_completed = status;
+                            self.sortAssignments();
+                            self.toggleComplete(item, status); 
+                        });
+                        return item;
+                    });
+
+                    self.assignments(formattedData);
+                    self.sortAssignments(); 
+                })
+                .catch(error => console.error("Load Error:", error));
+        };
+
+        //すべての授業を表示を選択
+        self.selectAllCourses = function() {
+            self.loadAssignments(null);
+        };
+
+        //特定の授業を選択
+        self.selectCourse = function(id, name) {
+            self.loadAssignments(id, name);
+        };
+
+        // --- 3.API通信(POST/DELETE) ---
+        //課題の操作
+        self.addAssignment = async function() {
+            // 二重送信の防止
+            if (self.isUpdating()) return;
+
+            const courseId = self.selectedCourseForAdd();
+            const isNewCourse = (courseId === 'new');
+            const isValidId = courseId && !isNaN(parseFloat(courseId)) && isFinite(courseId);
+
+            // バリデーション
+            if (!isNewCourse && !isValidId) return alert("授業を選択してください");
+            if (!self.newTitle() || !self.newDeadline()) return alert("タイトルと期限を入力してください");
+            if (isNewCourse && !self.newCourseName()) return alert("新しい授業名を入力してください");
+
+            try {
+                self.isUpdating(true);
+
+                const params = new URLSearchParams({
+                    course_id: courseId,
+                    title: self.newTitle(),
+                    description: self.newDescription(),
+                    deadline: self.newDeadline(),
+                    priority: self.newPriority(),
+                    new_course_name: isNewCourse ? self.newCourseName() : '',
+                    new_course_day: isNewCourse ? self.newCourseDay() : '',
+                    new_course_period: isNewCourse ? self.newCoursePeriod() : ''
+                });
+
+                const response = await fetch('/api/assignment/create.json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText);
+                }
+
+                const data = await response.json();
+
+                alert("保存に成功しました！");
+                window.location.reload();
+
+            } catch (err) {
+                console.error("保存失敗のログ:", err);
+                alert("エラー発生: " + err.message);
+
+            } finally {
+                self.isUpdating(false);
+            }
+        };
+
+        self.saveAssignmentUpdate = async function() {
+            if (self.isUpdating()) return;
+
+            const data = self.editingAssignment(); 
+
+            if (!data || !data.title) {
+                return alert("タイトルを入力してください");
+            }
+
+            try {
+                self.isUpdating(true);
+
+                const params = new URLSearchParams({
+                    id: data.id,
+                    title: data.title,
+                    description: data.description || '',
+                    deadline: data.deadline,
+                    priority: data.priority
+                });
+
+                const response = await fetch('/api/assignment/update.json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || "サーバーエラーが発生しました");
+                }
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert("課題を更新しました");
+                    self.editingAssignment(null);
+                    const currentCourseId = self.selectedCourse() ? self.selectedCourse().id : null;
+                    self.loadAssignments(currentCourseId);
+                } else {
+                    throw new Error(result.message || "更新に失敗しました");
+                }
+
+            } catch (err) {
+                console.error("更新失敗:", err);
+                alert("エラー: " + err.message);
+
+            } finally {
+                self.isUpdating(false);
+            }
+        };
+
+        self.toggleComplete = async function(assignment, newStatus) {
+            if (assignment.isSending) return; 
+            
+            const originalStatus = newStatus === 1 ? 0 : 1; // 失敗した時のためのバックアップ
+            
+            self.sortAssignments(); 
+
+            try {
+                assignment.isSending = true;
+
+                const response = await fetch('/api/assignment/update_status.json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: assignment.id, is_completed: newStatus })
+                });
+
+                if (!response.ok) throw new Error("Status Update Failed");
+
+            } catch (error) {
+                alert("通信エラーのため、変更を保存できませんでした。");
+                
+                // ロールバック処理
+                assignment.is_completed = originalStatus;
+                assignment.is_completed_bool(originalStatus === 1); 
+                self.sortAssignments();
+            } finally {
+                assignment.isSending = false;
+            }
+        };
+
+        self.deleteAssignment = async function(assignment) {
+            if (!confirm(`「${assignment.title}」を削除してもよろしいですか？`)) return;
+
+            if (self.isUpdating()) return;
+
+            try {
+                self.isUpdating(true);
+
+                const params = new URLSearchParams({ id: assignment.id });
+
+                const response = await fetch('/api/assignment/delete.json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+
+                if (!response.ok) throw new Error("サーバー通信に失敗しました");
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alert("削除しました");
+                    self.assignments.remove(assignment); 
+                } else {
+                    throw new Error(result.message || "削除に失敗しました");
+                }
+            } catch (err) {
+                console.error("削除エラー:", err);
+                alert("エラー: " + err.message);
+            } finally {
+                self.isUpdating(false);
+            }
+        };
+
+
+        self.saveEdit = async function(course, event) {
+            if (event && event.stopPropagation) event.stopPropagation();
+            if (self.isUpdating()) return;
+
+            if (!course.name()) return alert("授業名を入力してください");
+
+            try {
+                self.isUpdating(true);
+
+                const params = new URLSearchParams({
+                    id: course.id,
+                    name: course.name(),
+                    day_of_week: course.day_of_week(),
+                    period: course.period()
+                });
+
+                const response = await fetch('/api/course/update.json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+
+                if (!response.ok) throw new Error("通信に失敗しました");
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert("更新しました");
+                    self.editingCourseId(null); 
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                alert("エラー: " + error.message);
+            } finally {
+                self.isUpdating(false);
+            }
+        };
+
+        self.deleteCourse = async function(course) {
+                const courseName = ko.unwrap(course.name);
+                if (!confirm(`授業「${courseName}」を削除しますか？`)) return;
+
+                try {
+                    const params = new URLSearchParams();
+                    params.append('id', course.id);
+
+                    const response = await fetch('/api/course/delete.json', { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params
+                    });
+
+                    if (!response.ok) throw new Error('削除に失敗しました');
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        self.courses.remove(course);
+                        self.loadAssignments(null); 
+                        alert("削除が完了しました");
+                    } else {
+                        alert("エラー: " + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert("通信エラーが発生しました");
+                }
+            };
+
+        // --- 4. 表示用プロパティ（Computed） ---
         self.headerTitle = ko.computed(() => {
             const course = self.selectedCourse();
             return course ? course.name + ' の課題' : 'すべての課題';
@@ -50,9 +380,27 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         };
 
+        // 曜日IDを日本語名に変換するヘルパー
+        self.getDayName = function(dayId) {
+            // 引数 dayId が Observable の場合は自動で値を取り出す
+            const id = typeof dayId === 'function' ? dayId() : dayId;
+            
+            const dayNames = {
+                "1": "月",
+                "2": "火",
+                "3": "水",
+                "4": "木",
+                "5": "金",
+                "6": "土",
+                "0": "日"
+            };
+            return dayNames[id] || "？";
+        };
+
+        //監視設定
         self.currentSort.subscribe(() => self.sortAssignments());
 
-        // --- 4. モーダル操作 ---
+        // --- 5. UI操作 ---
         self.openModal = function() {
             self.editingAssignment(null);// 編集データをクリア
             self.isModalVisible(true);
@@ -60,7 +408,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         self.closeModal = function() {
             self.isModalVisible(false);
-            // Observableをリセット
             self.selectedCourseForAdd("");
             self.newTitle('');
             self.newDescription('');
@@ -69,222 +416,18 @@ document.addEventListener('DOMContentLoaded', function() {
             self.newCourseName('');
         };
 
+        //詳細のトグル
         self.toggleDetail = function(item) {
             item.isVisible(!item.isVisible()); // クリックで開閉を切り替え
         };
 
+        //授業の編集開始
         self.startEdit = function(id, event) {
             if (event && event.stopPropagation) event.stopPropagation();
                 self.editingCourseId(id);
         };
 
-
-
-
-
-        
-
-        // 3. 編集保存
-        self.saveEdit = function(id, event) {
-            if (event && event.stopPropagation) event.stopPropagation();
-
-            // DOMから値を取得
-            const name = document.getElementById(`edit-name-${id}`).value;
-            const day = document.getElementById(`edit-day-${id}`).value;
-            const period = document.getElementById(`edit-period-${id}`).value;
-
-            if (!name) { alert("授業名を入力してください"); return; }
-
-            const params = new URLSearchParams();
-            params.append('id', id);
-            params.append('name', name);
-            params.append('day_of_week', day);
-            params.append('period', period);
-
-            fetch('/api/course/update.json', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    self.editingCourseId(null); // 編集モード終了
-                    window.location.reload();   // 再読み込みして反映
-                } else {
-                    alert("エラー: " + data.message);
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        };
-
-        // --- 3. 授業選択メソッド ---
-        self.selectAllCourses = function() {
-            self.loadAssignments(null);
-        };
-        self.selectCourse = function(id, name) {
-            self.loadAssignments(id, name);
-        };
-
-        // --- 4. モーダル操作 ---
-        self.openModal = function() {
-            self.editingAssignment(null);// 編集データをクリア
-            self.isModalVisible(true);
-        };
-
-        self.closeModal = function() {
-            self.isModalVisible(false);
-            // Observableをリセット
-            self.selectedCourseForAdd("");
-            self.newTitle('');
-            self.newDescription('');
-            self.newDeadline('');
-            self.newPriority('2');
-            self.newCourseName('');
-        };
-
-
-        // --- 6. API通信 ---
-
-        // 【取得】
-        self.loadAssignments = function(courseId, courseName) {
-            self.assignments([]);
-            self.selectedCourse(courseId ? { id: courseId, name: courseName } : null);
-            const url = courseId ? `/api/assignment/list/${courseId}.json` : '/api/assignment/all.json';
-            
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) throw new Error("HTTP error");
-                    return response.text();
-                })
-
-                .then(text => {
-                    // もし中身が「空っぽ」なら、JSON.parseせずに空の構造を返す
-                    if (!text || text.trim() === "") {
-                        console.warn("サーバーからの返却値が空でした");
-                        return { status: "success", assignments: [] }; 
-                    }
-                    
-                    // 中身がある時だけ JSON に変換する
-                    return JSON.parse(text);
-                })
-
-                .then(data => {
-                    const targetData = (data && data.assignments) ? data.assignments : [];
-
-                    const formattedData = targetData.map(item => {
-
-                        // 詳細の表示状態を管理するスイッチを初期値 false (閉じている) で作成
-                        item.isVisible = ko.observable(false);
-
-                        const now = new Date();
-                        const deadline = new Date(item.deadline);
-                        const diffHours = (deadline - now) / (1000 * 60 * 60);
-
-                        // 24時間以内かつ期限を過ぎていない
-                        item.isUrgent = ko.observable(diffHours > 0 && diffHours <= 24);
-
-                        // 期限を過ぎている（マイナス）
-                        item.isOverdue = ko.observable(diffHours <= 0);
-                        
-                        // ① まず先に Observable（センサー）を作る！
-                        const isCompleted = Number(item.is_completed) === 1;
-                        item.is_completed_bool = ko.observable(isCompleted);
-
-                        // ② その後で subscribe（監視）を設定する
-                        item.is_completed_bool.subscribe((newValue) => {
-                            const status = newValue ? 1 : 0;
-                            item.is_completed = status; // 数値側も更新
-                            self.sortAssignments();     // 即座に並び替え
-                            self.toggleComplete(item, status); // 裏で通信
-                        });
-                        return item;
-                    });
-
-                    self.assignments(formattedData);
-                    self.sortAssignments(); 
-                })
-                .catch(error => console.error("Load Error:", error));
-            
-        };
-
-//         self.loadAssignments = function(courseId, courseName) {
-//     console.log("--- デバッグ開始 ---");
-//     console.log("選択された授業:", { id: courseId, name: courseName });
-
-//     self.assignments([]);
-//     self.selectedCourse(courseId ? { id: courseId, name: courseName } : null);
-    
-//     const url = courseId ? `/api/assignment/list/${courseId}.json` : '/api/assignment/all.json';
-//     console.log("リクエスト先URL:", url);
-
-//     fetch(url)
-//         .then(response => {
-//             // ステップ1: レスポンスの状態を確認
-//             console.log("【1. 通信状態】", {
-//                 status: response.status,
-//                 statusText: response.statusText,
-//                 ok: response.ok,
-//                 headers: [...response.headers.entries()] // 全ヘッダーを表示
-//             });
-
-//             if (!response.ok) {
-//                 throw new Error(`HTTPエラー発生: ${response.status}`);
-//             }
-//             // 重要：ここで一度「テキスト」として受け取る
-//             return response.text(); 
-//         })
-//         .then(text => {
-//             // ステップ2: 届いた生データの中身を確認
-//             console.log("【2. 受信データ(生)】", text === "" ? "(空っぽです！)" : text);
-
-//             if (!text || text.trim() === "") {
-//                 console.warn("警告: サーバーから中身が返ってきていません。");
-//                 return []; 
-//             }
-
-//             // ステップ3: JSONパースを試みる
-//             try {
-//                 const data = JSON.parse(text);
-//                 console.log("【3. JSON変換後】", data);
-//                 return data;
-//             } catch (e) {
-//                 console.error("【3. JSON変換エラー】パースに失敗しました。データが壊れている可能性があります。");
-//                 throw e;
-//             }
-//         })
-//         .then(data => {
-//             // ステップ4: Knockout.js用のデータ整形
-//             const targetData = Array.isArray(data) ? data : (data.assignments || []);
-//             console.log(`【4. 最終処理】 ${targetData.length} 件の課題を処理します。`);
-
-//             const formattedData = targetData.map(item => {
-//                 const isCompleted = Number(item.is_completed) === 1;
-//                 item.is_completed_bool = ko.observable(isCompleted);
-//                 item.is_completed_bool.subscribe((newValue) => {
-//                     const status = newValue ? 1 : 0;
-//                     item.is_completed = status;
-//                     self.sortAssignments();
-//                     self.toggleComplete(item, status);
-//                 });
-//                 return item;
-//             });
-
-//             self.assignments(formattedData);
-//             self.sortAssignments(); 
-//         })
-//         .catch(error => {
-//             // すべてのエラーをここで詳細に表示
-//             console.error("--- 致命的エラー発生 ---");
-//             console.error("エラーの種類:", error.name);
-//             console.error("メッセージ:", error.message);
-//             console.error("スタックトレース:", error.stack);
-//         });
-// };
-
-        // --- 課題の編集用メソッド ---
-
-        // 1. 編集開始
+        //課題の編集開始
         self.editAssignment = function(item) {
             self.isModalVisible(false); // ★重要：新規追加モーダルを強制的に閉じる
             // ko.toJS(item) で「今の値」のコピーを作成してセット
@@ -292,238 +435,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // 必要ならここでモーダルを表示するフラグをtrueにする
         };
 
-        // 2. 編集キャンセル
+        // 課題の編集キャンセル
         self.cancelEditAssignment = function() {
             self.editingAssignment(null);
             self.isModalVisible(false);
         };
-
-        // 3. 編集保存
-        self.saveAssignmentUpdate = function() {
-            const data = self.editingAssignment(); // 下書きデータ取得
-
-            // デバッグ用：ここで title が本当に入っているか確認！
-            console.log("送信直前のデータ:", data);
-
-            if (!data || !data.title) {
-                alert("タイトルを入力してください");
-                return;
+        
+        // --- 6.初期化 ---
+        self.init = async function() {
+            try {
+                await self.loadCourses();
+                self.loadAssignments(null);
+            } catch (error) {
+                console.error("初期化中にエラーが発生しました:", error);
             }
-            
-            const params = new URLSearchParams();
-            params.append('id', data.id);
-            params.append('title', data.title);
-            params.append('description', data.description);
-            params.append('deadline', data.deadline);
-            params.append('priority', data.priority);
-
-            fetch('/api/assignment/update.json', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    alert("課題を更新しました");
-                    self.editingAssignment(null); // モード終了
-                    self.loadAssignments(self.selectedCourse()?.id); // 画面をリフレッシュ
-                } else {
-                    alert("エラー: " + res.message);
-                }
-            })
-            .catch(err => alert("通信エラーが発生しました"));
         };
 
-
-        self.deleteCourse = function(id, name) {
-            if (!confirm(`授業「${name}」を削除しますか？\n※この授業内の課題もすべて削除されます。`)) {
-                return;
-            }
-
-            const params = new URLSearchParams();
-            params.append('id', id);
-
-            // 送信先を新しく作った course.php の方に変える！
-            fetch('/api/course/delete.json', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            })
-            // ...あとの処理は課題削除の時と同じ
-            .then(response => {
-                if (!response.ok) throw new Error('削除に失敗しました');
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    alert("削除が完了しました");
-                    // 画面をリロードして最新状態にする
-                    window.location.reload();
-                } else {
-                    alert("エラー: " + data.message);
-                }
-            })
-            .catch(error => {       
-                console.error('Error:', error);
-                alert("通信エラーが発生しました");
-            });
-        };
-
-        // 【追加】
-        self.addAssignment = function() {
-            if (self.isUpdating()) return;
-            
-            const courseId = self.selectedCourseForAdd();
-            if (!courseId) return alert("授業を選択してください");
-
-            // デバッグ用：何が選ばれているか確認（確認できたら消してOK）
-            console.log("選択されているID:", courseId);
-
-            // 修正ポイント：
-            // 「空文字」「null」「数字でない文字列（"授業"など）」をすべてブロックする
-            if (!courseId || courseId === "" || (courseId !== "new" && isNaN(courseId))) {
-                return alert("授業リストから正しい授業を選択してください。");
-            }
-
-            const isNewCourse = (courseId === 'new');
-            
-            if (!self.newTitle() || !self.newDeadline()) return alert("タイトルと期限を入力してください");
-            if (isNewCourse && !self.newCourseName()) return alert("新しい授業名を入力してください");
-
-            self.isUpdating(true);
-
-            const params = new URLSearchParams({
-                course_id: courseId,
-                title: self.newTitle(),
-                description: self.newDescription(),
-                deadline: self.newDeadline(),
-                priority: self.newPriority(),
-                new_course_name: isNewCourse ? self.newCourseName() : '',
-                new_course_day: isNewCourse ? self.newCourseDay() : '',
-                new_course_period: isNewCourse ? self.newCoursePeriod() : ''
-            });
-
-            fetch('/api/assignment/create.json', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            })
-            // .then(res => res.json())
-            // .then(() => {
-            //     window.location.reload(); 
-            // })
-            // .catch(err => alert("保存に失敗しました。"))
-
-            .then(res => {
-                // サーバーから「200 OK」以外が返ってきたらここで止める
-                if (!res.ok) {
-                    return res.text().then(text => { throw new Error(text) });
-                }
-                return res.json();
-            })
-            .then(data => {
-                console.log("保存成功:", data);
-                alert("保存に成功しました！"); // 確認できたらリロードするように戻す
-                window.location.reload(); 
-            })
-            .catch(err => {
-                // ここで何が起きているかアラートに出す
-                console.error("保存失敗のログ:", err);
-                alert("エラー発生: " + err.message); // これでPHPのエラーメッセージが見えるかも
-            // .finally(() => self.isUpdating(false)
-            });
-        };
-
-        // 【更新】
-        // self.toggleComplete = function(assignment, newStatus) {
-        //     if (self.isUpdating()) return;
-        //     self.isUpdating(true);
-
-        //     assignment.is_completed = newStatus;
-
-        //     fetch('/api/assignment/update_status.json', {
-        //         method: 'POST',
-        //         headers: { 'Content-Type': 'application/json' },
-        //         body: JSON.stringify({ id: assignment.id, is_completed: newStatus })
-        //     })
-        //     .then(() => {
-        //         // 完了したものを下に送るために再ソート
-        //         self.sortAssignments();
-        //     })
-        //     .catch(error => {
-        //         alert("通信エラーが発生しました。");
-        //         // エラー時は、見た目（チェックボックス）と内部データの両方を元に戻す
-        //         const originalStatus = newStatus === 1 ? 0 : 1;
-        //         assignment.is_completed = originalStatus;
-        //         assignment.is_completed_bool(originalStatus === 1);
-        //     })
-        //     .finally(() => self.isUpdating(false));
-        // };
-
-        self.toggleComplete = function(assignment, newStatus) {
-            // UIを止めないために isUpdating(true) は外すか、
-            // もしくはチェックボックスの disable 専用にするのがおすすめ
-            
-            fetch('/api/assignment/update_status.json', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: assignment.id, is_completed: newStatus })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error();
-                // 成功時はすでにソート済みなので何もしなくてOK！
-            })
-            .catch(error => {
-                alert("保存に失敗しました。元の位置に戻します。");
-                // 失敗した時だけ「巻き戻し」を行う
-                const originalStatus = newStatus === 1 ? 0 : 1;
-                assignment.is_completed = originalStatus;
-                assignment.is_completed_bool(originalStatus === 1); // ここで自動的に再ソートが走る仕組みにするか、下で呼ぶ
-                self.sortAssignments();
-            });
-        };
-
-        // home.js の中で、他の self.xxx = function... の並びに追加
-        self.deleteAssignment = function(assignment) {
-            // 1. 誤操作防止の確認
-            if (!confirm("「" + assignment.title + "」を削除してもよろしいですか？")) {
-                return;
-            }
-
-            // 2. 送信データの準備
-            const params = new URLSearchParams();
-            params.append('id', assignment.id); // assignment.id はDBの主キー
-
-            // 3. サーバーへリクエストを飛ばす
-            fetch('/api/assignment/delete.json', { // URLは環境に合わせて調整してください
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: params
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('削除に失敗しました');
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    alert("削除が完了しました");
-                    // 画面をリロードして最新状態にする
-                    window.location.reload();
-                } else {
-                    alert("エラー: " + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert("通信エラーが発生しました");
-            });
-        };
-
-        // --- 初期化 ---
-        self.loadAssignments(null);
+        self.init();
     }
 
     ko.applyBindings(new HomeViewModel());

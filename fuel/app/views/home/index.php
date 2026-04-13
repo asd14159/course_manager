@@ -8,68 +8,53 @@
         ?>
 
         <nav class="course-nav">
-            <ul>
-                <li data-bind="css: { active: !selectedCourse() }">
-                    <a href="#" data-bind="click: selectAllCourses">
-                        <span class="course-name">すべての課題</span>
-                    </a>
-                </li>
+             <ul data-bind="foreach: courses">
+                <li class="course-item" data-bind="css: { active: $root.selectedCourse() && $root.selectedCourse().id == id }">
+                    <div class="course-item-inner">
+                        
+                        <div class="course-view-mode" data-bind="visible: $root.editingCourseId() != id">
+                            <a href="#" class="course-info" data-bind="click: function() { $root.selectCourse(id, name()) }">
+                                <div class="course-name" data-bind="text: name"></div>
+                                <div class="course-meta">
+                                    <span class="course-day" data-bind="text: $root.getDayName(day_of_week()) + '曜日'"></span>
+                                    <span class="course-period" data-bind="text: period() + '限'"></span>
+                                </div>
+                            </a>
 
-                <?php foreach ($courses as $course): ?>
-                    <li class="course-item" data-bind="css: { active: selectedCourse() && selectedCourse().id == <?php echo $course->id; ?> }">
-                        <div class="course-item-inner">
+                            <button class="course-edit-btn" data-bind="click: function(d, e) { $root.startEdit(id, e) }">✏️</button>
+                            <button class="course-delete-btn" data-bind="click: function() { $root.deleteCourse($data) }">🗑️</button>
+
+                        <div class="course-edit-form" data-bind="visible: $root.editingCourseId() == id">
+                            <input type="text" class="form-control" data-bind="value: name"> 
                             
-                            <div class="course-view-mode" data-bind="visible: $root.editingCourseId() != <?php echo $course->id; ?>">
-                                <a href="#" class="course-info" data-bind="click: function() { selectCourse(<?php echo $course->id; ?>, '<?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>') }">
-                                    <div class="course-name">
-                                        <?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>
-                                    </div>
-                                    <div class="course-meta">
-                                        <span class="course-day"><?php echo $day_names[$course->day_of_week] ?? '？'; ?>曜日</span>
-                                        <span class="course-period"><?php echo $course->period; ?>限</span>
-                                    </div>
-                                </a>
+                            <div class="select-group">
+                                <select data-bind="value: day_of_week">
+                                    <option value="1">月曜日</option>
+                                    <option value="2">火曜日</option>
+                                    <option value="3">水曜日</option>
+                                    <option value="4">木曜日</option>
+                                    <option value="5">金曜日</option>
+                                    <option value="6">土曜日</option>
+                                </select>
 
-                                <button class="course-edit-btn" data-bind="click: function(d, e) { $root.startEdit(<?php echo $course->id; ?>, e) }">
-                                    ✏️
-                                </button>
-
-                                <button class="course-delete-btn" data-bind="click: function(data, event) { $root.deleteCourse(<?php echo $course->id; ?>, '<?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>', event) }">
-                                    🗑️
-                                </button>
+                                <select data-bind="value: period">
+                                    <option value="1">1限</option>
+                                    <option value="2">2限</option>
+                                    <option value="3">3限</option>
+                                    <option value="4">4限</option>
+                                    <option value="5">5限</option>
+                                    <option value="6">6限</option>
+                                    <option value="7">7限</option>
+                                </select>
                             </div>
 
-                            <div class="course-edit-form" data-bind="visible: $root.editingCourseId() == <?php echo $course->id; ?>" style="display: none;">
-                                <input type="text" id="edit-name-<?php echo $course->id; ?>" 
-                                    value="<?php echo htmlspecialchars($course->name, ENT_QUOTES, 'UTF-8'); ?>" class="form-control">
-                                
-                                <div class="select-group">
-                                    <select id="edit-day-<?php echo $course->id; ?>">
-                                        <?php foreach ($day_names as $val => $name): ?>
-                                            <option value="<?php echo $val; ?>" <?php echo $course->day_of_week == $val ? 'selected' : ''; ?>>
-                                                <?php echo $name; ?>曜日
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-
-                                    <select id="edit-period-<?php echo $course->id; ?>">
-                                        <?php for ($i = 1; $i <= 7; $i++): ?>
-                                            <option value="<?php echo $i; ?>" <?php echo $course->period == $i ? 'selected' : ''; ?>>
-                                                <?php echo $i; ?>限
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
-
-                                <div class="edit-actions">
-                                    <button class="save-btn" data-bind="click: function(d, e) { $root.saveEdit(<?php echo $course->id; ?>, e) }">保存</button>
-                                    <button class="cancel-btn" data-bind="click: function() { $root.editingCourseId(null) }">中止</button>
-                                </div>
+                            <div class="edit-actions">
+                                <button class="save-btn" data-bind="click: $root.saveEdit">保存</button>
+                                <button class="cancel-btn" data-bind="click: function() { $root.editingCourseId(null) }">中止</button>
                             </div>
-
                         </div>
-                    </li>
-                <?php endforeach; ?>
+                    </div>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -118,7 +103,7 @@
                         }
                     ">
                         <td class="col-status" data-bind="click: function(d, e) { e.stopPropagation(); return true; }">
-                            <input type="checkbox" data-bind="checked: is_completed_bool, disable: $parent.isUpdating">
+                            <input type="checkbox" data-bind="checked: is_completed_bool, disable: isSending">
                         </td>
                         <td class="col-title" data-bind="text: title"></td>
                         <td data-bind="visible: !$parent.selectedCourse(), text: course_name || '不明'"></td>
