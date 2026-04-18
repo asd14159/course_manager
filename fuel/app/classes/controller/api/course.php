@@ -50,20 +50,26 @@ class Controller_Api_Course extends Controller_RestBase
         try {
             \DB::start_transaction();
 
+            //ログイン中のユーザーか他ユーザーのcourseを消せてしまっていたため修正
+            $course = \DB::select('id')
+                ->from('courses')
+                ->where('id', '=', $course_id)
+                ->where('user_id', '=', $this->user_id)
+                ->execute();
+
+            if (count($course) === 0) {
+                throw new \Exception('この授業を削除する権限がないか、存在しません', 403);
+            }
+
             // 授業に紐付く「課題」をすべて削除
             \DB::delete('assignments')
                 ->where('course_id', '=', $course_id)
                 ->execute();
 
             //授業自体を削除
-            $result = \DB::delete('courses')
+            \DB::delete('courses')
                 ->where('id', '=', $course_id)
                 ->execute();
-
-            //削除対象が存在しなかった場合
-            if ($result === 0) {
-                throw new Exception('削除対象の授業が見つかりませんでした');
-            }
 
             // すべて成功したら確定
             \DB::commit_transaction();
@@ -76,10 +82,12 @@ class Controller_Api_Course extends Controller_RestBase
         } catch (\Exception $e) {
             \DB::rollback_transaction();
 
+            $status_code = $e->getCode() ?: 500;
+
             return $this->response(array(
                 'status' => 'error',
                 'message' => $e->getMessage()
-            ), 500);
+            ), $status_code);
         }
     }
 

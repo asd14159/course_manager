@@ -11,11 +11,11 @@ class Controller_RestBase extends \Controller_Rest
 
         if (!\Auth::check())
         {
-            echo json_encode([
+            //apiのレスポンス形式を統一
+            return $this->response([
                 'status' => 'error',
                 'message' => 'Unauthorized'
-            ]);
-            exit;
+            ], 401);
         }
 
         $user_info = \Auth::get_user_id();

@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error:', error);
                     alert("通信エラーが発生しました");
                 }
-            };
+        };
 
         // --- 4. 表示用プロパティ（Computed） ---
         self.headerTitle = ko.computed(() => {

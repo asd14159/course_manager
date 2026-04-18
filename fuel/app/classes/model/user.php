@@ -14,7 +14,7 @@ class Model_User extends \Model
             $result = \DB::insert('users')
                 ->set([
                     'username'   => $data['username'],
-                    'password'   => \Auth::instance()->hash_password($data['password']), // ※後のステップでAuthクラスを使ってハッシュ化します
+                    'password'   => \Auth::instance()->hash_password($data['password']),
                     'email'      => $data['email'],
                     'group'      => 1,
                     'last_login' => 0,
