@@ -6,104 +6,115 @@ class Controller_Api_Assignment extends Controller_RestBase
 
     public function get_all()
     {
-        $assignments = \Model_Assignment::get_all_by_user($this->user_id);
-        // return $this->response($assignments);
-        return $this->response([
-            'status'      => 'success',
-            'assignments' => $assignments,
-        ]);
+        try {
+            $assignments = \Model_Assignment::find_by_user($this->user_id);
+
+            return $this->response([
+                'status'      => 'success',
+                'assignments' => $assignments ?: [],
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error("課題の全取得に失敗: " . $e->getMessage());
+            return $this->response([
+                'status'      => 'error',
+                'assignments' => '課題読み込み中にエラーが発生しました',
+            ], 500);
+        }
     }
 
     public function get_list($course_id = null)
     {
         try {
-            // 1. パラメータのバリデーション
-            // 授業IDが指定されていない、あるいは数値でない場合は 400 Bad Request
+            //バリデーション
             if ($course_id === null || !is_numeric($course_id)) {
-                return $this->response(array(
+                return $this->response([
                     'status'  => 'error',
                     'message' => '授業IDが正しく指定されていません'
-                ), 400);
+                ], 400);
             }
 
-            // 2. データの取得
+            $course = \Model_Course::find_by_pk($course_id);
+
+            //授業idを指定すれば他ユーザーの授業情報も取得できてしまったため追加
+            if (!$course || (int)$course['user_id'] !== $this->user_id) {
+                return $this->response(array(
+                    'status'  => 'error',
+                    'message' => '指定された授業にアクセスする権限がありません'
+                ), 403);
+            }
+
+            //データの取得
             $assignments = \Model_Assignment::get_by_course($course_id);
 
-            /**
-             * 【修正ポイント】
-             * $assignments が null や false だった場合、FuelPHPは「データなし」と判断し
-             * 204 No Content を返してしまいます。
-             * これを強制的に「空の配列 (empty array)」にキャストすることで、
-             * サーバーは 200 OK と共に [] という文字列を返すようになります。
-             */
             $result = !empty($assignments) ? array_values($assignments) : array();
 
-
-
-            // 3. レスポンス（データが0件でも空の配列 [] を 200 OK で返す）
-            // 常に一貫したデータ型（この場合は配列）を返すのがポイントです
-            return $this->response(array(
+            // レスポンス（データが0件でも空の配列 [] を 200 OK で返す）
+            return $this->response([
                 'status'      => 'success',
                 'assignments' => $result
-            ), 200);
+            ], 200);
 
         } catch (\Exception $e) {
-            // 4. 万が一のサーバーエラー対応
+            //サーバーエラー
             \Log::error("Assignment list fetch error: " . $e->getMessage());
-            return $this->response(array(
+            return $this->response([
                 'status'  => 'error',
                 'message' => '課題データの取得中にエラーが発生しました'
-            ), 500);
+            ], 500);
         }
     }
-    /**
-     * 課題の新規登録 (POST)
-     * 要件9: CRUDのCreate / 要件7: DBクラスの使用
-     */
+    
+    //課題の追加
     public function post_create()
     {
+        //バリデーションの設定
         $val = \Validation::forge();
         $val->add_field('course_id', '授業', 'required');
         $val->add_field('title', '課題名', 'required|max_length[50]');
         $val->add_field('deadline', '締め切り', 'required');
         $val->add_field('priority', '優先度', 'required|is_numeric');
 
-        if ($val->run())
-        {
-            $course_id = \Input::post('course_id');
-            if (\Auth::check()) {
-                $current_user_id = \Auth::get_user_id()[1];
-            } else {
-                // ログインしていない場合のエラー処理
-                return $this->response(array('status' => 'error', 'message' => 'セッションが切れました'), 401);
-            }
+        if (!$val->run()) {
+            return $this->response(array('status' => 'error', 'message' => $val->error_message()), 400);
+        }
 
-            // --- A. 新しい授業を作成する場合 ---
+        $course_id = \Input::post('course_id');
+
+        \DB::start_transaction();
+
+        try {
+            //新しい授業を作成
             if ($course_id === 'new') {
                 $new_course_name = \Input::post('new_course_name');
                 if (empty($new_course_name)) {
-                    return $this->response(array('status' => 'error', 'message' => array('new_course_name' => '新しい授業名を入力してください')), 400);
+                    throw new \Exception('新しい授業名を入力してください', 400);
                 }
 
-                // DB構造に合わせてカラム名を修正 (day -> day_of_week)
-                // user_id が必須なので、現在のユーザーIDを入れる
-                list($new_id, $rows) = \DB::insert('courses')->set(array(
-                    'user_id'     => $current_user_id, 
+                $insert_result = \DB::insert('courses')->set([
+                    'user_id'     => $this->user_id,
                     'name'        => $new_course_name,
                     'day_of_week' => \Input::post('new_course_day', 1),
                     'period'      => \Input::post('new_course_period', 1),
                     'created_at'  => date('Y-m-d H:i:s'),
                     'updated_at'  => date('Y-m-d H:i:s'),
-                ))->execute();
+                ])->execute();
                 
-                $course_id = $new_id;
+                $course_id = $insert_result[0];
             } 
-            else if (!is_numeric($course_id)) {
-                return $this->response(array('status' => 'error', 'message' => array('course_id' => '不正な授業IDです')), 400);
+            //既存の授業を選択
+            else {
+                if (!is_numeric($course_id)) {
+                    throw new \Exception('不正な授業IDです', 400);
+                }
+                $course = \Model_Course::find_by_pk($course_id);
+                if (!$course || (int)$course['user_id'] !== $this->user_id) {
+                    throw new \Exception('指定された授業に課題を追加する権限がありません', 403);
+                }
             }
 
-            // 2. 課題データの挿入
-            list($insert_id, $rows_affected) = \DB::insert('assignments')->set(array(
+            //課題データの挿入
+            $assignment_result = \DB::insert('assignments')->set([
                 'course_id'    => $course_id,
                 'title'        => $val->validated('title'),
                 'description'  => \Input::post('description', ''),
@@ -112,12 +123,27 @@ class Controller_Api_Assignment extends Controller_RestBase
                 'is_completed' => 0,
                 'created_at'   => date('Y-m-d H:i:s'),
                 'updated_at'   => date('Y-m-d H:i:s'),
-            ))->execute();
+            ])->execute();
 
-            return $this->response(array('status' => 'success', 'id' => $insert_id), 200);
+            $insert_id = $assignment_result[0];
+
+            // すべて成功したらコミット
+            \DB::commit_transaction();
+
+            return $this->response(['status' => 'success', 'id' => $insert_id], 200);
+
+        } catch (\Exception $e) {
+            // 失敗したらロールバック（無かったことにする）
+            \DB::rollback_transaction();
+            
+            \Log::error("Assignment post_create Error: " . $e->getMessage());
+            
+            $code = is_numeric($e->getCode()) && $e->getCode() >= 400 ? $e->getCode() : 500;
+            return $this->response([
+                'status' => 'error', 
+                'message' => $e->getMessage()
+            ], $code);
         }
-
-        return $this->response(array('status' => 'error', 'message' => $val->error_message()), 400);
     }
 
     /**
@@ -126,18 +152,43 @@ class Controller_Api_Assignment extends Controller_RestBase
      */
     public function post_update_status()
     {
-        // JSON形式のPOSTデータを取得
-        $id = \Input::json('id');
-        $is_completed = \Input::json('is_completed');
+        try {
+            $id = \Input::json('id');
+            $is_completed = \Input::json('is_completed');
 
-        // DB::update で特定のレコードを更新
-        \DB::update('assignments')
-            ->value('is_completed', $is_completed)
-            ->value('updated_at', date('Y-m-d H:i:s'))
-            ->where('id', '=', $id)
-            ->execute();
+            //バリデーション
+            if (!$id || !is_numeric($id)) {
+                return $this->response(array('status' => 'error', 'message' => '不正なIDです'), 400);
+            }
 
-        return $this->response(array('status' => 'success'), 200);
+            //権限チェックを追加
+            // assignments を courses と結合して、courses.user_id を見る
+            $assignment = \DB::select('assignments.id')
+                ->from('assignments')
+                ->join('courses', 'INNER')
+                ->on('assignments.course_id', '=', 'courses.id')
+                ->where('assignments.id', '=', $id)
+                ->where('courses.user_id', '=', $this->user_id)
+                ->execute()
+                ->current();
+
+            if (!$assignment) {
+                return $this->response(array('status' => 'error', 'message' => '指定された課題を更新する権限がありません'), 403);
+            }
+
+            // 更新実行
+            \DB::update('assignments')
+                ->value('is_completed', $is_completed)
+                ->value('updated_at', date('Y-m-d H:i:s'))
+                ->where('id', '=', $id)
+                ->execute();
+
+            return $this->response(array('status' => 'success'), 200);
+
+        } catch (\Exception $e) {
+            \Log::error("Assignment update_status error: " . $e->getMessage());
+            return $this->response(array('status' => 'error', 'message' => '更新中にエラーが発生しました'), 500);
+        }
     }
 
     public function post_update($id = null) {

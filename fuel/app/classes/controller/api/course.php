@@ -9,26 +9,19 @@ class Controller_Api_Course extends Controller_RestBase
     public function get_list()
     {
         try {
-            // すでに RestBase でセット済み
-            $current_user_id = $this->user_id;
-
-            $courses = \DB::select()
-                ->from('courses')
-                ->where('user_id', '=', $current_user_id)
-                ->order_by('day_of_week', 'asc')
-                ->order_by('period', 'asc')
-                ->execute()
-                ->as_array();
+            $courses = \Model_Course::find_by_user($this->user_id);
 
             return $this->response([
                 'status'  => 'success',
-                'courses' => $courses
+                'courses' => $courses ?: []
             ], 200);
 
         } catch (\Exception $e) {
+            \Log::error("Course get_list Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+
             return $this->response([
                 'status' => 'error',
-                'message' => $e->getMessage()
+                'message' => '授業の一覧に失敗しました'
             ], 500);
         }
     }
@@ -41,10 +34,10 @@ class Controller_Api_Course extends Controller_RestBase
 
         //IDが正当かチェック
         if (!$course_id || !is_numeric($course_id)) {
-            return $this->response(array(
+            return $this->response([
                 'status' => 'error',
                 'message' => '無効な授業IDです'
-            ), 400);
+            ], 400);
         }
 
         try {
@@ -74,29 +67,30 @@ class Controller_Api_Course extends Controller_RestBase
             // すべて成功したら確定
             \DB::commit_transaction();
 
-            return $this->response(array(
+            return $this->response([
                 'status' => 'success',
                 'message' => '授業と関連する課題をすべて削除しました'
-            ), 200);
+            ], 200);
 
         } catch (\Exception $e) {
             \DB::rollback_transaction();
 
+            \Log::error("Course post_delete Error: " . $e->getMessage());
+
             $status_code = $e->getCode() ?: 500;
 
-            return $this->response(array(
+            $message = ($status_code === 403) ? $e->getMessage() : '削除処理中にシステムエラーが発生しました';
+
+            return $this->response([
                 'status' => 'error',
-                'message' => $e->getMessage()
-            ), $status_code);
+                'message' => $message
+            ], $status_code);
         }
     }
 
-   //授業名の更新
+    //授業名の更新
     public function post_update()
     {
-        $user = \Auth::get_user_id();
-        $current_user_id = $user[1];
-
         //入力値の取得
         $id = \Input::post('id');
         $name = \Input::post('name');
@@ -105,10 +99,10 @@ class Controller_Api_Course extends Controller_RestBase
 
         //バリデーション
         if (!$id || !isset($name) || !isset($day_of_week) || !isset($period)) {
-            return $this->response(array(
+            return $this->response([
                 'status' => 'error', 
                 'message' => '必要な情報が不足しています'
-            ), 400);
+            ], 400);
         }
 
         try {
@@ -121,22 +115,22 @@ class Controller_Api_Course extends Controller_RestBase
                     'updated_at'   => date('Y-m-d H:i:s'),
                 ))
                 ->where('id', '=', $id)
-                ->where('user_id', '=', $current_user_id)
+                ->where('user_id', '=', $this->user_id)
                 ->execute();
 
             //execute() の戻り値は「影響を受けた行数」のため 値が全く同じで更新されなかった場合も成功とする
-            return $this->response(array(
+            return $this->response([
                 'status' => 'success',
                 'message' => '授業情報を更新しました'
-            ), 200);
+            ], 200);
 
         } catch (\Exception $e) {
-            return $this->response(array(
+            \Log::error("Course post_update Error: " . $e->getMessage());
+
+            return $this->response([
                 'status' => 'error', 
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ), 500);
+                'message' => '授業情報の更新中にエラーが発生しました'
+            ], 500);
         }
     }
 }

@@ -7,7 +7,7 @@ class Model_Course extends \Model_Crud
     protected static $_updated_at = 'updated_at';
     protected static $_mysql_timestamp = true;
     
-    public static function get_all_by_user($user_id)
+    public static function find_by_user($user_id)
     {
         return static::find(array(
             'where' => array(

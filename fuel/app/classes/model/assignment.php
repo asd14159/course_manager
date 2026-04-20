@@ -28,7 +28,7 @@ class Model_Assignment extends \Model_Crud
     }
 
     //ユーザーの全課題を取得
-    public static function get_all_by_user($user_id)
+    public static function find_by_user($user_id)
     {
         return \DB::select(
             'assignments.*',
