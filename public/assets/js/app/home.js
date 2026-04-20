@@ -45,7 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         self.loadAssignments = function(courseId, courseName) {
             self.assignments([]);
-            self.selectedCourse(courseId ? { id: courseId, name: courseName } : null);
+            self.selectedCourse(courseId ? { 
+                id: courseId, 
+                name: ko.observable(courseName) 
+            } : null);
             const url = courseId ? `/api/assignment/list/${courseId}` : '/api/assignment/all.json';
             
             fetch(url)
@@ -309,8 +312,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
 
                 if (data.status === 'success') {
+                    //ここ未だ未修正
+                    course.name(newName);
+                    const selected = self.selectedCourse();
+                    if (selected && selected.id == course.id) {
+                        if (typeof selected.name === 'function') {
+                            selected.name(newName);
+                        }
+                    }
                     alert("更新しました");
-                    self.editingCourseId(null); 
+                    self.editingCourseId(null);
                 } else {
                     throw new Error(data.message);
                 }
@@ -354,7 +365,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // --- 4. 表示用プロパティ（Computed） ---
         self.headerTitle = ko.computed(() => {
             const course = self.selectedCourse();
-            return course ? course.name + ' の課題' : 'すべての課題';
+            if (!course) return 'すべての課題';
+
+            // name が Observable かどうかを判定して値を取り出す
+            const name = (typeof course.name === 'function') ? course.name() : course.name;
+            return name + ' の課題';
         });
 
         self.isNewCourseMode = ko.computed(() => {
