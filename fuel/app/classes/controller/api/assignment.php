@@ -146,10 +146,7 @@ class Controller_Api_Assignment extends Controller_RestBase
         }
     }
 
-    /**
-     * 完了状態の更新 (POST)
-     * 要件4: 非同期で完了状態を保存
-     */
+    //非同期で完了処理を実行
     public function post_update_status()
     {
         try {
@@ -192,48 +189,89 @@ class Controller_Api_Assignment extends Controller_RestBase
     }
 
     public function post_update($id = null) {
-        // 入力値を受け取る
+        $update_id = $id ?: \Input::post('id');
         $val = \Input::post();
 
-        // 1. バリデーション（できれば実装したい！）
-        if (empty($val['title'])) {
-            return $this->response(array('status' => 'error', 'message' => 'タイトルは必須です'), 400);
+        //バリデーション
+        if (empty($update_id) || empty($val['title'])) {
+            return $this->response(['status' => 'error', 'message' => '必要な情報が不足しています'], 400);
         }
-        // 3. JSのparams.append('id', data.id) で送っている場合は、ここでも id を取得する
-        $update_id = !empty($id) ? $id : \Input::post('id');
+        try {
+            //権限のチェック
+            // そのIDが存在し、かつ自分の授業に紐づいているか
+            $exists = \DB::select('id')
+                ->from('assignments')
+                ->where('id', '=', $update_id)
+                ->and_where('course_id', 'IN', \DB::select('id')
+                    ->from('courses')
+                    ->where('user_id', '=', $this->user_id)
+                )
+                ->execute()
+                ->count();
 
-        if (empty($update_id)) {
-            return $this->response(array('status' => 'error', 'message' => 'IDが指定されていません'), 400);
+            if ($exists === 0) {
+                return $this->response([
+                    'status'  => 'error',
+                    'message' => '指定された課題が見つからないか、編集権限がありません'
+                ], 404);
+            }
+
+            //更新処理
+            \DB::update('assignments')
+                ->set([
+                    'title'       => $val['title'],
+                    'description' => isset($val['description']) ? $val['description'] : '',
+                    'deadline'    => $val['deadline'],
+                    'priority'    => (int) $val['priority'],
+                    'updated_at'  => date('Y-m-d H:i:s'),
+                ])
+                ->where('id', '=', $update_id)
+                ->execute();
+
+            return $this->response([
+                'status'  => 'success',
+                'message' => '課題を更新しました'
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error("Assignment Update Error: " . $e->getMessage());
+            return $this->response([
+                'status'  => 'error',
+                'message' => 'サーバーエラーが発生しました'
+            ], 500);
         }
-        
-        // DBクラスを使って更新（CRUDのUにあたります）
-        $result = \DB::update('assignments')
-            ->set([
-                'title'       => $val['title'],
-                'description' => $val['description'],
-                'deadline'    => $val['deadline'],
-                'priority'    => $val['priority'],
-                'updated_at'  => date('Y-m-d H:i:s'),
-            ])
-            ->where('id', '=', $update_id)
-            ->execute();
-
-        return $this->response(['status' => 'success']);
     }
 
     public function post_delete()
     {
         $id = \Input::post('id');
 
-        if ($id && is_numeric($id)) {
-            // DBから削除を実行
-            \DB::delete('assignments')
-                ->where('id', '=', $id)
-                ->execute();
-
-            return $this->response(array('status' => 'success'), 200);
+        if (!$id || !is_numeric($id)) {
+            return $this->response(['status' => 'error', 'message' => '不正なIDです'], 400);
         }
 
-        return $this->response(array('status' => 'error', 'message' => '不正なIDです'), 400);
+        try {
+            // 削除の実行(実行権限のチェックを追加)
+            $affected_rows = \DB::delete('assignments')
+                ->where('id', '=', $id)
+                ->and_where('course_id', 'IN', \DB::select('id')
+                    ->from('courses')
+                    ->where('user_id', '=', $this->user_id)
+                )
+                ->execute();
+
+            if ($affected_rows === 0) {
+                return $this->response([
+                    'status'  => 'error', 
+                    'message' => '対象が見つからないか、削除権限がありません'
+                ], 404);
+            }
+
+            return $this->response(['status' => 'success'], 200);
+
+        } catch (\Exception $e) {
+            \Log::error("Assignment Delete Error: " . $e->getMessage());
+            return $this->response(['status' => 'error', 'message' => 'サーバーエラー'], 500);
+        }
     }
 }

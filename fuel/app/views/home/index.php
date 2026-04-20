@@ -21,7 +21,8 @@
                             </a>
                             <button class="course-edit-btn" data-bind="click: function(d, e) { $root.startEdit(id, e) }">✏️</button>
                             <button class="course-delete-btn" data-bind="click: function() { $root.deleteCourse($data) }">🗑️</button>
-                        </div> <div class="course-edit-form" data-bind="visible: $root.editingCourseId() == id">
+                        </div> 
+                        <div class="course-edit-form" data-bind="visible: $root.editingCourseId() == id">
                             <input type="text" class="form-control" data-bind="value: name"> 
                             <div class="select-group">
                                 <select data-bind="value: day_of_week">
@@ -34,7 +35,13 @@
                                 </select>
                                 <select data-bind="value: period">
                                     <option value="1">1限</option>
-                                    </select>
+                                    <option value="2">2限</option>
+                                    <option value="3">3限</option>
+                                    <option value="4">4限</option>
+                                    <option value="5">5限</option>
+                                    <option value="6">6限</option>
+                                    <option value="7">7限</option>
+                                </select>
                             </div>
                             <div class="edit-actions">
                                 <button class="save-btn" data-bind="click: $root.saveEdit">保存</button>
