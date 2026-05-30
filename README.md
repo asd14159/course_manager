@@ -68,13 +68,14 @@
 
 ### 1. リポジトリ取得
 `git clone https://github.com/asd14159/course_manager`
+
 `cd project`
 
 ### 2. コンテナ起動（Dockerの場合）
-docker-compose up -d
+`docker-compose up -d`
 
 ### 3. マイグレーション実行
-php oil refine migrate --all
+`php oil refine migrate --all`
 
 ### 4. サーバ起動（ローカルの場合）
-php -S localhost:8000 -t public
+`php -S localhost:8000 -t public`
