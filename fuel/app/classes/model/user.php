@@ -11,22 +11,29 @@ class Model_User extends \Model
     public static function create_user(array $data): int
     {
         try {
+            $insert = [
+                'username'       => $data['username'],
+                'password'       => \Auth::instance()->hash_password($data['password']),
+                'email'          => $data['email'],
+
+                'group'          => 1,
+                'last_login'     => 0,
+                'login_hash'     => md5(uniqid()),   // ← 仮値でOK
+                'profile_fields' => '',
+
+                // 時間
+                'created_at'     => time(),
+                'updated_at'     => time(),
+            ];
+
             $result = \DB::insert('users')
-                ->set([
-                    'username'   => $data['username'],
-                    'password'   => \Auth::instance()->hash_password($data['password']),
-                    'email'      => $data['email'],
-                    'group'      => 1,
-                    'last_login' => 0,
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s'),
-                ])
+                ->set($insert)
                 ->execute();
 
             return (int) $result[0];
             
         } catch (\Database_Exception $e) {
-            throw new \Exception("ユーザー登録に失敗しました: " . $e->getMessage());
+            throw new \Exception('ユーザー登録に失敗しました');
         }
     }
 }

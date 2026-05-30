@@ -10,3 +10,9 @@
 
 # fuel/app/logs フォルダの中身すべてを除外
 /fuel/app/logs/*
+/fuel/app/logs/
+
+fuel/core/
+fuel/packages/
+fuel/vendor/
+docs/

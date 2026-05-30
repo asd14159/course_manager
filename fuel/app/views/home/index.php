@@ -12,7 +12,7 @@
                 <li class="course-item" data-bind="css: { active: $root.selectedCourse() && $root.selectedCourse().id == id }">
                     <div class="course-item-inner">
                         <div class="course-view-mode" data-bind="visible: $root.editingCourseId() != id">
-                            <a href="#" class="course-info" data-bind="click: function() { $root.selectCourse(id, name()) }">
+                            <a href="#" class="course-info" data-bind="click: function() { $root.selectCourse($data) }">
                                 <div class="course-name" data-bind="text: name"></div>
                                 <div class="course-meta">
                                     <span class="course-day" data-bind="text: $root.getDayName(day_of_week()) + '曜日'"></span>

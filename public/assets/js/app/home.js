@@ -43,12 +43,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
 
-        self.loadAssignments = function(courseId, courseName) {
+        self.loadAssignments = function(courseId) {
             self.assignments([]);
-            self.selectedCourse(courseId ? { 
-                id: courseId, 
-                name: ko.observable(courseName) 
-            } : null);
+            
             const url = courseId ? `/api/assignment/list/${courseId}` : '/api/assignment/all.json';
             
             fetch(url)
@@ -107,12 +104,14 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         //すべての授業を表示を選択
-        self.selectAllCourses = function() {
+        self.selectAllCourses = function(course) {
+            self.selectedCourse(course);
             self.loadAssignments(null);
         };
 
         //特定の授業を選択
-        self.selectCourse = function(id, name) {
+        self.selectCourse = function(course) {
+            self.selectedCourse(course);
             self.loadAssignments(id, name);
         };
 
@@ -312,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
 
                 if (data.status === 'success') {
-                    //ここ未だ未修正
+                    const newName = course.name();
                     course.name(newName);
                     const selected = self.selectedCourse();
                     if (selected && selected.id == course.id) {
