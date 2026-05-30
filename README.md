@@ -67,8 +67,8 @@
 ## 起動方法
 
 ### 1. リポジトリ取得
-git clone https://github.com/asd14159/course_manager
-cd project
+`git clone https://github.com/asd14159/course_manager`
+`cd project`
 
 ### 2. コンテナ起動（Dockerの場合）
 docker-compose up -d
